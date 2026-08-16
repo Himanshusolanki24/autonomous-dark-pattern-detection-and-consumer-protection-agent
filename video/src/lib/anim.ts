@@ -1,9 +1,9 @@
 import { interpolate, spring, type SpringConfig } from "remotion";
 
 // ─── Spring presets ────────────────────────────────────────────────────────────
-const SPRING_GENTLE: SpringConfig = { damping: 24, stiffness: 180, mass: 1 };
-const SPRING_SNAPPY: SpringConfig = { damping: 20, stiffness: 260, mass: 0.8 };
-const SPRING_SOFT: SpringConfig   = { damping: 30, stiffness: 120, mass: 1 };
+const SPRING_GENTLE: SpringConfig = { damping: 24, stiffness: 180, mass: 1, overshootClamping: false };
+const SPRING_SNAPPY: SpringConfig = { damping: 20, stiffness: 260, mass: 0.8, overshootClamping: false };
+const SPRING_SOFT: SpringConfig   = { damping: 30, stiffness: 120, mass: 1, overshootClamping: false };
 
 export function fadeIn(frame: number, delay = 0, duration = 20): number {
   return interpolate(frame, [delay, delay + duration], [0, 1], {
@@ -71,7 +71,7 @@ export function scalePop(
   return spring({
     frame: frame - delay,
     fps,
-    config: { damping: 14, stiffness: 340, mass: 0.7 },
+    config: { damping: 14, stiffness: 340, mass: 0.7, overshootClamping: false },
     from: 0.5,
     to: 1,
   });

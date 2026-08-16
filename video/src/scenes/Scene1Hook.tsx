@@ -7,7 +7,9 @@ import { fadeIn, slideUp, fadeOut } from "../lib/anim";
 
 // ─── Fake subscription page ────────────────────────────────────────────────────
 function SubscriptionPage({ chaos, chaosStep }: { chaos: number; chaosStep: number }) {
-  const bgColor = interpolate(chaos, [0, 1], ["#ffffff", "#fff8f0"]);
+  // blend white to warm tint as chaos increases
+  const warmness = Math.round(chaos * 8);
+  const bgColor = chaos > 0.5 ? "#fff8f0" : "#ffffff";
 
   return (
     <div
@@ -31,7 +33,7 @@ function SubscriptionPage({ chaos, chaosStep }: { chaos: number; chaosStep: numb
           alignItems: "center",
           gap: 8,
           marginBottom: 40,
-          opacity: fadeIn(1, 0, 1),
+          opacity: 1,
         }}
       >
         <div
