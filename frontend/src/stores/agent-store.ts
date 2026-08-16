@@ -23,6 +23,7 @@ export interface AgentSession {
   browser: BrowserState;
   approvalRequired: boolean;
   verification: VerificationResult | null;
+  live: boolean;
 }
 
 const initialBrowser: BrowserState = {
@@ -50,6 +51,7 @@ interface AgentStore extends AgentSession {
   setBrowser: (browser: BrowserState) => void;
   setApprovalRequired: (required: boolean) => void;
   setVerification: (verification: VerificationResult | null) => void;
+  setLive: (live: boolean) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -62,6 +64,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
   browser: initialBrowser,
   approvalRequired: false,
   verification: null,
+  live: false,
 
   startSession: (task) =>
     set({
@@ -74,6 +77,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
       browser: initialBrowser,
       approvalRequired: false,
       verification: null,
+      live: false,
     }),
 
   resetSession: () =>
@@ -87,6 +91,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
       browser: initialBrowser,
       approvalRequired: false,
       verification: null,
+      live: false,
     }),
 
   setStatus: (status) => set({ status }),
@@ -98,4 +103,5 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setBrowser: (browser) => set({ browser }),
   setApprovalRequired: (required) => set({ approvalRequired: required }),
   setVerification: (verification) => set({ verification }),
+  setLive: (live) => set({ live }),
 }));

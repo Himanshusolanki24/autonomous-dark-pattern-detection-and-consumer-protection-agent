@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 export function ApprovalModal() {
   const approvalRequired = useAgentStore((s) => s.approvalRequired);
   const task = useAgentStore((s) => s.task);
+  const live = useAgentStore((s) => s.live);
   const setApprovalRequired = useAgentStore((s) => s.setApprovalRequired);
   const setStatus = useAgentStore((s) => s.setStatus);
   const [error, setError] = useState<string | null>(null);
@@ -19,27 +20,31 @@ export function ApprovalModal() {
 
   const approve = async () => {
     setError(null);
+    if (!live || !sessionId) {
+      demoSimulator.approve();
+      return;
+    }
     try {
-      if (sessionId) {
-        await approveSession(sessionId);
-      }
+      await approveSession(sessionId);
       setApprovalRequired(false);
       setStatus("running");
     } catch {
-      setError("Could not reach the backend. Is it running on port 3001?");
+      setError("Could not approve — the backend is not reachable.");
     }
   };
 
   const stop = async () => {
     setError(null);
+    if (!live || !sessionId) {
+      demoSimulator.stopAgent();
+      return;
+    }
     try {
-      if (sessionId) {
-        await stopSession(sessionId);
-      }
+      await stopSession(sessionId);
       setApprovalRequired(false);
       demoSimulator.reset();
     } catch {
-      setError("Could not reach the backend. Is it running on port 3001?");
+      setError("Could not stop the agent — the backend is not reachable.");
     }
   };
 

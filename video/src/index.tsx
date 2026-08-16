@@ -1,9 +1,9 @@
 import React from "react";
-import { Composition } from "remotion";
+import { Composition, registerRoot } from "remotion";
 import { DemoVideo } from "./Root";
 import { TOTAL_FRAMES, FPS } from "./lib/tokens";
 
-export function RemotionRoot() {
+function RemotionRoot() {
   return (
     <>
       <Composition
@@ -17,3 +17,5 @@ export function RemotionRoot() {
     </>
   );
 }
+
+registerRoot(RemotionRoot);

@@ -42,11 +42,13 @@ export default function AgentPage() {
         service: task.service,
         plan: task.plan,
       });
+      store.setLive(true);
       pollRef.current?.cancel();
       pollRef.current = startPolling(sessionId, () => {
         pollRef.current = null;
       });
     } catch {
+      store.setLive(false);
       demoSimulator.start(task);
     }
   }, [store]);
