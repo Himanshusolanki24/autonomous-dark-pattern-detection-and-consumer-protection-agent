@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Dark Pattern Trap Killer - Hackathon Demo Video",
   "scripts": {
-    "start": "remotion studio",
-    "render": "remotion render DemoVideo out/demo.mp4 --codec h264",
-    "render-preview": "remotion render DemoVideo out/demo-preview.mp4 --codec h264 --scale 0.5"
+    "start": "remotion studio src/index.tsx",
+    "render": "remotion render src/index.tsx DemoVideo out/demo.mp4 --codec h264",
+    "render-preview": "remotion render src/index.tsx DemoVideo out/demo-preview.mp4 --codec h264 --scale 0.5",
+    "render-gif": "remotion render src/index.tsx DemoVideo out/demo.gif --codec gif --scale 0.4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.288",

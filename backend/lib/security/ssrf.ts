@@ -43,7 +43,7 @@ export function isPrivateAddress(ip: string): boolean {
 }
 
 /** Dev-only affordance: allow loopback targets for the self-hosted demo site. */
-function devAllows(target: string): boolean {
+function devAllows(): boolean {
   return process.env.SUPABASE_DEV_MODE !== "false";
 }
 
@@ -78,7 +78,7 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
     throw new Error("URL credentials are not allowed");
   }
   if (isLoopbackHost(url.hostname)) {
-    if (!devAllows(url.hostname)) {
+    if (!devAllows()) {
       throw new Error("Loopback hostnames are not allowed");
     }
     return url;
@@ -86,7 +86,7 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
 
   const host = url.hostname.toLowerCase();
   if (isIP(host) !== 0 && isPrivateAddress(host)) {
-    if (!devAllows(host)) {
+    if (!devAllows()) {
       throw new Error("Private IP addresses are not allowed");
     }
     return url;
@@ -97,7 +97,7 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
     const records = await lookup(host, { all: true });
     for (const { address } of records) {
       if (isPrivateAddress(address)) {
-        if (!devAllows(address)) {
+        if (!devAllows()) {
           throw new Error("Resolved address is not public");
         }
       }
