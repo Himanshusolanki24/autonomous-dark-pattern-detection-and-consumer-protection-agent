@@ -1,0 +1,42 @@
+{
+  "name": "dark-pattern-trap-killer-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend for Dark Pattern Trap Killer — agentic AI consumer-protection API, Supabase auth/storage, Playwright agent orchestration.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "tsx scripts/generate-types.ts",
+    "cleanup:proofs": "tsx scripts/cleanup-proofs.ts",
+    "smoke": "tsx scripts/smoke-agent.ts"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^0.2.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "2.48.0",
+    "next": "16.3.1",
+    "playwright": "^1.50.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^16.4.7",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "dptk-video",
+  "version": "1.0.0",
+  "description": "Dark Pattern Trap Killer - Hackathon Demo Video",
+  "scripts": {
+    "start": "remotion studio",
+    "render": "remotion render DemoVideo out/demo.mp4 --codec h264",
+    "render-preview": "remotion render DemoVideo out/demo-preview.mp4 --codec h264 --scale 0.5"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.288",
+    "remotion": "4.0.288",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
+  }
+}

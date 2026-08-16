@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+
+# production
+build/
+dist/
+
+# misc
+.DS_Store
+*.pem
+*.log
+
+# env files — never commit secrets
+.env
+.env.local
+.env*.local
+.env.production
+.env*.production
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# playwright / vitest
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+
+# agent proofs / local artifacts
+.proofs/
+backend/.proofs/
+
+# remotion render output
+video/out/
