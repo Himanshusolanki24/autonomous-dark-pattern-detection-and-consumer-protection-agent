@@ -58,7 +58,7 @@ export const GRAPH = {
 
 /** Conditional edge target after the plan node. */
 export function routeAfterPlan(state: AgentState): string {
-  if (state.status === "completed") return GRAPH.COMPLETE;
+  if (state.status === "completed") return GRAPH.VERIFY;
   if (state.status === "failed") return GRAPH.FAIL;
   // A rejected approval terminates the run.
   if (state.resumeApproval === "rejected") return GRAPH.FAIL;
@@ -69,7 +69,7 @@ export function routeAfterPlan(state: AgentState): string {
 
 /** Conditional edge target after the action node. */
 export function routeAfterAct(state: AgentState): string {
-  if (state.status === "completed") return GRAPH.COMPLETE;
+  if (state.status === "completed") return GRAPH.VERIFY;
   if (state.status === "failed") return GRAPH.FAIL;
   return GRAPH.PERCEIVE;
 }
@@ -92,11 +92,13 @@ export function buildGraph(
     .addConditionalEdges(GRAPH.PLAN, routeAfterPlan, [
       GRAPH.ACT,
       GRAPH.APPROVAL_GATE,
+      GRAPH.VERIFY,
       GRAPH.COMPLETE,
       GRAPH.FAIL,
     ])
     .addConditionalEdges(GRAPH.ACT, routeAfterAct, [
       GRAPH.PERCEIVE,
+      GRAPH.VERIFY,
       GRAPH.COMPLETE,
       GRAPH.FAIL,
     ])

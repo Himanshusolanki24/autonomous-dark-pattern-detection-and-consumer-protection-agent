@@ -105,7 +105,16 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
   if (!browser) {
     browser = await browserManager.createSession(input.sessionId);
     const target = state.lastUrl && state.lastUrl !== "about:blank" ? state.lastUrl : state.targetUrl;
-    await browser.page.goto(target, { waitUntil: "domcontentloaded" });
+    try {
+      await browser.page.goto(target, { waitUntil: "domcontentloaded", timeout: 20000 });
+    } catch {
+      // Fallback if domcontentloaded times out on heavy SPAs
+      try {
+        await browser.page.goto(target, { waitUntil: "load", timeout: 10000 });
+      } catch {
+        // Continue to let perceive read whatever DOM was loaded
+      }
+    }
   }
 
   const ctx = {
@@ -117,8 +126,9 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
     proofsDir: PROOFS_DIR,
   };
 
+  let finalState: AgentState | null = null;
   try {
-    const finalState = await graph.invoke(state, { configurable: ctx });
+    finalState = await graph.invoke(state, { configurable: ctx });
     await persistFinalState(input.sessionId, finalState);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -135,7 +145,9 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
       errorMessage: message,
     });
   } finally {
-    await browserManager.destroySession(input.sessionId, "completed");
+    if (finalState?.status !== "approval_required") {
+      await browserManager.destroySession(input.sessionId, "completed");
+    }
   }
 }
 

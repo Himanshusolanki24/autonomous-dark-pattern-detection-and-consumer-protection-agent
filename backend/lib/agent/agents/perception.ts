@@ -41,7 +41,15 @@ export const perceiveNode: NodeHandler = async (
   const pageUrl = page.url();
   const firstVisit = !pageUrl || pageUrl === "about:blank";
   if (firstVisit) {
-    await page.goto(state.targetUrl, { waitUntil: "domcontentloaded" });
+    try {
+      await page.goto(state.targetUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    } catch {
+      try {
+        await page.goto(state.targetUrl, { waitUntil: "load", timeout: 10000 });
+      } catch {
+        // Continue and perceive whatever content was received
+      }
+    }
   }
 
   const result = await perceive(page);

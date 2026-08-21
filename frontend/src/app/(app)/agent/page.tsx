@@ -65,6 +65,9 @@ function AgentPageContent() {
   const [eventCollapsed, setEventCollapsed] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [targetUrlInput, setTargetUrlInput] = useState<string>(
+    searchParams.get("url") || searchParams.get("targetUrl") || "http://localhost:3001/demo-target/account"
+  );
   const pollRef = useRef<{ cancel: () => void } | null>(null);
 
   const pattern = store.patterns.find((p) => p.id === selectedPatternId) ?? null;
@@ -75,47 +78,25 @@ function AgentPageContent() {
   const isActive = store.status === "running" || isBlocked;
   const statusCfg = STATUS_CONFIG[store.status] ?? STATUS_CONFIG.idle;
 
-  // Load session from URL param on mount
-  useEffect(() => {
-    const sessionId = searchParams.get("session");
-    if (!sessionId || !isIdle) return;
-    setStarting(true);
-    fetchSession(sessionId)
-      .then((session) => {
-        const task: CancellationTask = {
-          id: sessionId,
-          service: hostnameOf(session.targetUrl ?? ""),
-          plan: session.goal ?? "Investigation",
-          price: "—",
-          domain: hostnameOf(session.targetUrl ?? ""),
-          status: "running",
-          createdAt: session.startedAt ?? nowIso(),
-          patternCount: 0,
-        };
-        store.startSession(task);
-        store.setLive(true);
-        pollRef.current?.cancel();
-        pollRef.current = startPolling(sessionId, () => { pollRef.current = null; });
-      })
-      .catch(() => setStartError("Could not load session. The backend may be unavailable."))
-      .finally(() => setStarting(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startAgent = useCallback(async () => {
+  const startAgent = useCallback(async (customUrl?: string) => {
+    const urlToRun = (customUrl ?? targetUrlInput).trim() || "http://localhost:3001/demo-target/account";
     setStartError(null);
     setStarting(true);
+    const goal = urlToRun.includes("demo-target") || urlToRun.includes("cancel")
+      ? "cancel_subscription"
+      : "detect_dark_patterns";
     try {
       const res = await startCancellation({
-        goal: "detect_dark_patterns",
-        targetUrl: "http://localhost:3001/demo-target/account",
+        goal,
+        targetUrl: urlToRun,
       });
+      const domain = hostnameOf(urlToRun);
       const task: CancellationTask = {
         id: res.sessionId,
-        service: "Demo Target",
+        service: domain === "localhost" ? "Demo Target" : domain,
         plan: "Investigation",
         price: "—",
-        domain: "localhost:3001",
+        domain: domain,
         status: "running",
         createdAt: nowIso(),
         patternCount: 0,
@@ -125,14 +106,46 @@ function AgentPageContent() {
       router.replace(`/agent?session=${res.sessionId}`);
       pollRef.current?.cancel();
       pollRef.current = startPolling(res.sessionId, () => { pollRef.current = null; });
-    } catch {
+    } catch (err) {
       setStartError(
         "Could not start the agent. Ensure the backend is running on port 3001."
       );
     } finally {
       setStarting(false);
     }
-  }, [store, router]);
+  }, [targetUrlInput, store, router]);
+
+  // Load session from URL param on mount, or auto-start if url param passed
+  useEffect(() => {
+    const sessionId = searchParams.get("session");
+    const passedUrl = searchParams.get("url") || searchParams.get("targetUrl");
+
+    if (sessionId && isIdle) {
+      setStarting(true);
+      fetchSession(sessionId)
+        .then((session) => {
+          const task: CancellationTask = {
+            id: sessionId,
+            service: hostnameOf(session.targetUrl ?? ""),
+            plan: session.goal ?? "Investigation",
+            price: "—",
+            domain: hostnameOf(session.targetUrl ?? ""),
+            status: "running",
+            createdAt: session.startedAt ?? nowIso(),
+            patternCount: 0,
+          };
+          store.startSession(task);
+          store.setLive(true);
+          pollRef.current?.cancel();
+          pollRef.current = startPolling(sessionId, () => { pollRef.current = null; });
+        })
+        .catch(() => setStartError("Could not load session. The backend may be unavailable."))
+        .finally(() => setStarting(false));
+    } else if (passedUrl && isIdle && !sessionId) {
+      void startAgent(passedUrl);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const stopAgent = useCallback(async () => {
     if (store.task?.id && store.live) {
@@ -141,6 +154,9 @@ function AgentPageContent() {
     pollRef.current?.cancel();
     pollRef.current = null;
     store.resetSession();
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/agent");
+    }
     router.replace("/agent");
   }, [store, router]);
 
@@ -202,7 +218,7 @@ function AgentPageContent() {
           {isIdle ? (
             <Button
               onClick={() => void startAgent()}
-              disabled={starting}
+              disabled={starting || !targetUrlInput.trim()}
               size="sm"
             >
               {starting ? (
@@ -243,6 +259,67 @@ function AgentPageContent() {
           )}
         </div>
       </div>
+
+      {/* ── Target URL Input & Quick Presets (when idle) ────────────────── */}
+      {isIdle && (
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <label htmlFor="target-url-input" className="text-xs font-semibold text-zinc-700 flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 text-blue-600" />
+              Enter Target URL to Run Autonomous Agent
+            </label>
+            <span className="text-[10px] text-zinc-400">Agent runs live in backend pipeline</span>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void startAgent();
+            }}
+            className="flex items-center gap-2"
+          >
+            <div className="relative flex-1">
+              <input
+                id="target-url-input"
+                type="url"
+                value={targetUrlInput}
+                onChange={(e) => setTargetUrlInput(e.target.value)}
+                placeholder="https://example.com/account/subscription"
+                className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3.5 py-2 text-xs font-mono text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={starting || !targetUrlInput.trim()}
+              size="sm"
+              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            >
+              {starting ? "Launching..." : "Launch Agent Pipeline"}
+            </Button>
+          </form>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Quick Presets:</span>
+            {[
+              { name: "AcmeCloud Demo Target", url: "http://localhost:3001/demo-target/account" },
+              { name: "Coursera", url: "https://www.coursera.org" },
+              { name: "Udemy", url: "https://www.udemy.com" },
+            ].map((preset) => (
+              <button
+                key={preset.url}
+                type="button"
+                onClick={() => {
+                  setTargetUrlInput(preset.url);
+                  void startAgent(preset.url);
+                }}
+                className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Error banner ────────────────────────── */}
       {startError && (
@@ -594,20 +671,30 @@ function AgentPageContent() {
           {/* Session failed state */}
           {isFailed && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle
-                  className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
-                  aria-hidden="true"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-red-800">
-                    Session failed
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-red-700">
-                    The agent encountered an error. Check the event stream for
-                    details, then reset and try again.
-                  </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle
+                    className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-red-800">
+                      Session failed
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-red-700">
+                      The previous session encountered an error or was aborted. Click Reset to start a clean new investigation.
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void stopAgent()}
+                  className="shrink-0 border-red-300 bg-white text-red-700 hover:bg-red-100 hover:text-red-800"
+                >
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  Reset
+                </Button>
               </div>
             </div>
           )}

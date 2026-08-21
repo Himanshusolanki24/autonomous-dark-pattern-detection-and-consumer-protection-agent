@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { ValidationError } from "./errors";
 
-export const goalSchema = z.enum(["cancel_subscription"]);
+export const goalSchema = z.enum(["cancel_subscription", "detect_dark_patterns"]);
 
 export const targetUrlSchema = z
   .string()
