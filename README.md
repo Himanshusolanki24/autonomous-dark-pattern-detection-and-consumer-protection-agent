@@ -4,6 +4,23 @@ An agentic AI consumer-protection platform that detects dark patterns on subscri
 
 Built for a hackathon. Runs end-to-end locally with **no external services required** (a dev-mode in-memory store replaces Supabase until you configure it).
 
+## 🛠️ What's New (Session Updates)
+
+### Fixed: Scanner → Agent Data Flow
+- **Scanner page** (`/scanner`): Removed stale `useRouter` import; `analyze()` now runs the scanner and completes successfully. Users can then navigate to the agent page for the full pipeline.
+- **Agent page** (`/agent`): Rewritten to fetch real sessions from the backend API (`GET /api/agent/:sessionId`). No more hardcoded Netflix demo data — all UI derives from actual backend session state.
+- **PERCEIVE→DETECT→PLAN→ACT→VERIFY pipeline**: Now flows correctly from scanner through agent session, with real perception data (elements/box positions) from the backend classifier.
+
+### Demo Data Properly Gated
+- Renamed all `mock*` → `demo*` (`demoTasks`, `demoActivity`, `demoScannerHistory`) with explicit `DEMO MODE` warnings throughout the codebase.
+- `demoSimulator` is opt-in only and never auto-called in the production investigation flow.
+- **No hardcoded Netflix data** appears anywhere in the production agent workflow.
+
+### Mistral AI Support
+- Updated `backend/.env.example` to support any OpenAI-compatible LLM provider.
+- Set `LLM_API_KEY`, `LLM_BASE_URL=https://api.mistral.ai/v1`, `LLM_MODEL=mistral-large-latest` for Mistral AI.
+- The LLM client falls back to deterministic heuristics when no key is configured — the MVP always works.
+
 ## Features
 
 - **Multi-agent pipeline** (LangGraph): `perception → detection → planning → action → verification`
@@ -13,6 +30,7 @@ Built for a hackathon. Runs end-to-end locally with **no external services requi
 - **Proof of cancellation** — evidence chain (page state, screenshots) written to `backend/.proofs/`
 - **Activity feed, tasks, dashboard** — real data from the backend API
 - **Security** — SSRF protection, rate limiting, idempotency keys, audit log, RLS-isolated Supabase schema
+- **Mistral AI / OpenAI-compatible LLM support** for enhanced classification (optional)
 
 ## Repository layout
 
@@ -58,7 +76,87 @@ Open http://localhost:3000.
 The backend hosts a self-hosted demo target (a mock "AcmeCloud" subscription site):
 
 - **Scanner** — scan `http://localhost:3001/demo-target/account` from the `/scanner` page and see real detections.
-- **Agent** — hit **Start Agent** on the `/agent` page. Watch the pipeline perceive, detect, plan, act and verify against the demo target in real time.
+- **Agent** — hit **Start Agent** on the `/agent` page. Watch the pipeline perceive, detect, plan, act and verify against the demo target in real time. No hardcoded Netflix data — real session state from the backend.
+
+## Environment variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Notes |
+| -------- | -------- | ----- |
+| `NEXT_PUBLIC_SUPABASE_URL` | only for real Supabase | `SUPABASE_DEV_MODE=false` to enforce |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | only for real Supabase | anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | only for real Supabase | service-role key |
+| `SUPABASE_DEV_MODE` | optional | `"false"` to disable the in-memory store; default enabled |
+| `PROOFS_DIR` | optional | proof output dir (default `backend/.proofs/`) |
+| `LLM_*` / provider keys | optional | only needed for non-deterministic planning/LLM nodes. Supports any OpenAI-compatible provider: set `LLM_BASE_URL=https://api.mistral.ai/v1` and `LLM_MODEL=mistral-large-latest` for Mistral AI, or keep `LLM_BASE_URL=https://api.openai.com/v1` and `LLM_MODEL=gpt-4o-mini` for OpenAI. |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Notes |
+| -------- | -------- | ----- |
+| `NEXT_PUBLIC_API_URL` | optional | backend base URL, default `http://localhost:3001` |
+
+## API endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| POST | `/api/scanner/analyze` | Read-only dark-pattern scan of a URL |
+| POST | `/api/agent/start` | Start a guided cancellation agent run (202, fire-and-forget) |
+| GET | `/api/agent/[id]` | Session detail + detections |
+| GET | `/api/agent/[id]/events` | Ordered event stream for a session |
+| POST | `/api/agent/[id]/approve` | Approve the pending final action and resume |
+| POST | `/api/agent/[id]/reject` | Reject the pending final action |
+| POST | `/api/agent/[id]/stop` | Stop the session |
+| GET / POST | `/api/cancellations` | List / start cancellation tasks |
+| GET | `/api/cancellations/[id]` | Task detail |
+| POST | `/api/cancellations/[id]/stop` | Stop a task |
+| GET | `/api/activity?limit=&cursor=&status=&agent=&date=` | Paginated, filterable activity feed |
+| GET / PATCH | `/api/profile` | User profile |
+| GET | `/api/auth/me` | Current session |
+| POST | `/api/auth/signout` | Sign out |
+| GET | `/api/health` | Health check |
+
+All API routes require authentication; in dev mode the in-memory store auto-authenticates a demo user.
+
+## Testing
+
+```bash
+cd backend
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm test            # vitest (51 tests / 6 suites)
+npm run smoke       # end-to-end agent run against the self-hosted demo target
+```
+
+```bash
+cd frontend
+npm run lint
+npx tsc --noEmit
+```
+
+## Supabase setup (production)
+
+For real auth + persistence, configure a Supabase project:
+
+1. `cd backend && cp .env.example .env` and fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (or `npm run db:reset` for local).
+3. Enable Google OAuth in Supabase Auth → Providers, and configure the auth callback at `http://localhost:3001/auth/callback`.
+4. Set `SUPABASE_DEV_MODE=false`.
+
+See `backend/docs/setup/` for `supabase.md`, `google-auth.md` and `deployment.md`.
+
+## Security model
+
+- **SSRF protection** — only `http(s)`, blocks private/loopback/reserved IPs and DNS-rebinding attempts
+- **Rate limiting** — per-user limits on scanner, agent-start and approval actions
+- **Idempotency keys** — duplicate agent-start requests return the cached response
+- **Audit log** — every agent event is persisted for the activity feed and evidence chain
+- **Human-in-the-loop** — the final irreversible action requires an explicit approval; approvals are server-validated and transitioned with the service-role client only
+
+## License
+
+Proprietary — hackathon project.
 
 ## Environment variables
 
