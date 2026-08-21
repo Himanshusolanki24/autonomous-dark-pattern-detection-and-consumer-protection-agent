@@ -3,12 +3,25 @@ import type {
   CancellationTask,
   DarkPattern,
   RiskOverview,
+  AgentId,
+  Severity,
 } from "./types";
 
-const base = Date.parse("2026-08-16T15:40:00Z");
-const iso = (offsetSec: number) => new Date(base + offsetSec * 1000).toISOString();
+/**
+ * DEMO MODE DATA — explicitly isolated for development/demo purposes.
+ * 
+ * ⚠️ PRODUCTION WARNING ⚠️
+ * This data is for development/testing only and must NOT be used in the
+ * real investigation flow. The real flow uses backend agent sessions
+ * with actual URLs and Playwright-perceived data.
+ * 
+ * To opt-in to demo mode, import from "@/lib/services/simulator"
+ * and use demoSimulator.start() explicitly. Do NOT import mock data
+ * directly in production component files.
+ */
 
-export const mockPatterns: DarkPattern[] = [
+// Generic pattern data — not website-specific
+export const demoPatterns: DarkPattern[] = [
   {
     id: "pat_confirm",
     type: "confirmshaming",
@@ -18,7 +31,7 @@ export const mockPatterns: DarkPattern[] = [
     explanation:
       "The cancellation option uses guilt-inducing language to discourage the user from declining the offer.",
     whyItMatters:
-      "Confirmshaming uses shame to pressure you into a choice you didn't intend to make. Nobody should be guilt-tripped into staying subscribed.",
+      "Confirmshaming uses shame to pressure you into a choice you didn't intend to make.",
   },
   {
     id: "pat_roach",
@@ -31,151 +44,165 @@ export const mockPatterns: DarkPattern[] = [
     whyItMatters:
       "Roach motels make it trivial to get in but hard to leave. A subscription you cannot cancel is effectively not yours.",
   },
-  {
-    id: "pat_retention",
-    type: "hard-to-cancel",
-    severity: "medium",
-    confidence: 87,
-    element: "Retention offer step",
-    explanation:
-      "A forced retention offer interrupts the cancellation flow and attempts to reverse the user's decision.",
-    whyItMatters:
-      "Forced retention offers add friction designed to wear you down. The agent navigates them so you don't have to.",
-  },
-  {
-    id: "pat_forced",
-    type: "forced-continuity",
-    severity: "medium",
-    confidence: 78,
-    element: "Billing terms",
-    explanation:
-      "The free trial auto-renews without a clear reminder before the billing date.",
-    whyItMatters:
-      "Forced continuity signs you up for recurring charges you didn't clearly agree to.",
-  },
-  {
-    id: "pat_drip",
-    type: "drip-pricing",
-    severity: "medium",
-    confidence: 72,
-    element: "Checkout summary",
-    explanation:
-      "Optional add-ons are added to the total only at the final step of checkout.",
-    whyItMatters:
-      "Drip pricing hides the true cost until the last moment, when you're most likely to accept it.",
-  },
-  {
-    id: "pat_basket",
-    type: "basket-sneaking",
-    severity: "low",
-    confidence: 64,
-    element: "Subscription checkbox",
-    explanation:
-      "A subscription checkbox is pre-ticked by default during signup.",
-    whyItMatters:
-      "Basket sneaking adds items to your purchase without you choosing them.",
-  },
-  {
-    id: "pat_misdirection",
-    type: "misdirection",
-    severity: "low",
-    confidence: 58,
-    element: "Dialog controls",
-    explanation:
-      "The primary action is visually de-emphasised so the user misses it.",
-    whyItMatters:
-      "Misdirection hides the option you actually want behind visual noise.",
-  },
 ];
 
-export const mockTasks: CancellationTask[] = [
+// Generic task data — not website-specific
+export const demoTasks: CancellationTask[] = [
   {
-    id: "task_netflix",
-    service: "Netflix",
-    plan: "Premium Subscription",
-    price: "₹649 / month",
-    domain: "netflix.com",
+    id: "task_example",
+    service: "Example Service",
+    plan: "Subscription",
+    price: "$9.99 / month",
+    domain: "example.com",
     status: "completed",
-    createdAt: iso(0),
-    completedAt: iso(120),
-    patternCount: 4,
-  },
-  {
-    id: "task_spotify",
-    service: "Spotify",
-    plan: "Duo Plan",
-    price: "₹199 / month",
-    domain: "spotify.com",
-    status: "approval",
-    createdAt: iso(360),
-    patternCount: 2,
-  },
-  {
-    id: "task_adobe",
-    service: "Adobe Creative Cloud",
-    plan: "Photography Plan",
-    price: "₹1,688 / month",
-    domain: "adobe.com",
-    status: "running",
-    createdAt: iso(420),
-    patternCount: 3,
-  },
-  {
-    id: "task_aws",
-    service: "Amazon Prime",
-    plan: "Annual Membership",
-    price: "₹1,499 / year",
-    domain: "amazon.in",
-    status: "waiting",
-    createdAt: iso(900),
-    patternCount: 0,
-  },
-  {
-    id: "task_linkedin",
-    service: "LinkedIn Premium",
-    plan: "Career Plan",
-    price: "₹1,399 / month",
-    domain: "linkedin.com",
-    status: "failed",
-    createdAt: iso(1800),
-    patternCount: 1,
-  },
-  {
-    id: "task_medium",
-    service: "Medium",
-    plan: "Membership",
-    price: "$5 / month",
-    domain: "medium.com",
-    status: "blocked",
-    createdAt: iso(2400),
+    createdAt: new Date().toISOString(),
+    completedAt: new Date(Date.now() + 120000).toISOString(),
     patternCount: 2,
   },
 ];
 
-export const mockActivity: ActivityRecord[] = [
-  { id: "act_1", timestamp: iso(1), agent: "perception", event: "Page analyzed", website: "netflix.com", status: "success" },
-  { id: "act_2", timestamp: iso(2), agent: "detection", event: "Roach Motel", website: "netflix.com", status: "warning" },
-  { id: "act_3", timestamp: iso(3), agent: "detection", event: "Confirmshaming", website: "netflix.com", status: "warning" },
-  { id: "act_4", timestamp: iso(4), agent: "planning", event: "Next action determined", website: "netflix.com", status: "success" },
-  { id: "act_5", timestamp: iso(5), agent: "action", event: "Clicked Manage Subscription", website: "netflix.com", status: "success" },
-  { id: "act_6", timestamp: iso(6), agent: "detection", event: "Retention offer detected", website: "netflix.com", status: "warning" },
-  { id: "act_7", timestamp: iso(7), agent: "action", event: "Selected cancellation option", website: "netflix.com", status: "success" },
-  { id: "act_8", timestamp: iso(118), agent: "verification", event: "Cancellation verified", website: "netflix.com", status: "verified" },
+// Generic activity records — not website-specific
+export const demoActivity: ActivityRecord[] = [
+  { id: "act_1", timestamp: new Date().toISOString(), agent: "perception", event: "Page analyzed", website: "example.com", status: "success" },
+  { id: "act_2", timestamp: new Date(Date.now() - 1000).toISOString(), agent: "detection", event: "Roach Motel", website: "example.com", status: "warning" },
 ];
 
-export const mockRisk: RiskOverview = {
-  overall: "high",
-  totalPatterns: 4,
-  critical: 1,
-  warnings: 3,
+// Generic risk overview
+export const demoRisk: RiskOverview = {
+  overall: "medium",
+  totalPatterns: 2,
+  critical: 0,
+  warnings: 2,
 };
 
-export const mockScannerHistory = [
-  { url: "netflix.com", risk: "high" as const, patterns: 4, at: iso(-86400) },
-  { url: "amazon.in", risk: "medium" as const, patterns: 2, at: iso(-172800) },
-  { url: "example.com", risk: "low" as const, patterns: 0, at: iso(-259200) },
+// Generic scanner history
+export const demoScannerHistory = [
+  { url: "example.com", risk: "medium" as const, patterns: 2, at: new Date(Date.now() - 86400000).toISOString() },
 ];
 
-export function getTask(id: string): CancellationTask | undefined {
-  return mockTasks.find((t) => t.id === id);
+/**
+ * Demo simulator — opt-in for development mode.
+ * 
+ * Usage: import { demoSimulator } from "@/lib/services/simulator";
+ *        demoSimulator.start(demoTasks[0]);
+ * 
+ * This must NOT be called automatically in production investigation flow.
+ * The real flow uses backend agent sessions with real URLs.
+ */
+export { demoSimulator } from "@/lib/services/simulator";
+
+export function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+export function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+export function shortId(id: string): string {
+  return id.slice(0, 8).toUpperCase();
+}
+
+export function nowIso(): string {
+  return new Date().toISOString();
+}
+
+export function uid(prefix = "evt"): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const severityOrder: Record<Severity, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+export function maxSeverity(a: Severity, b: Severity): Severity {
+  return severityOrder[b] > severityOrder[a] ? b : a;
+}
+
+export function severityTone(severity: Severity): {
+  badge: string;
+  dot: string;
+  text: string;
+} {
+  switch (severity) {
+    case "critical":
+      return {
+        badge: "bg-red-50 text-red-700 border-red-200",
+        dot: "bg-red-600",
+        text: "text-red-700",
+      };
+    case "high":
+      return {
+        badge: "bg-red-50 text-red-700 border-red-200",
+        dot: "bg-red-600",
+        text: "text-red-700",
+      };
+    case "medium":
+      return {
+        badge: "bg-amber-50 text-amber-700 border-amber-200",
+        dot: "bg-amber-500",
+        text: "text-amber-700",
+      };
+    case "low":
+      return {
+        badge: "bg-zinc-100 text-zinc-600 border-zinc-200",
+        dot: "bg-zinc-400",
+        text: "text-zinc-600",
+      };
+  }
+}
+
+export function agentTone(agent: AgentId): {
+  color: string;
+  dot: string;
+} {
+  switch (agent) {
+    case "perception":
+      return { color: "text-sky-700", dot: "bg-sky-500" };
+    case "detection":
+      return { color: "text-amber-700", dot: "bg-amber-500" };
+    case "planning":
+      return { color: "text-indigo-700", dot: "bg-indigo-500" };
+    case "action":
+      return { color: "text-blue-700", dot: "bg-blue-500" };
+    case "verification":
+      return { color: "text-emerald-700", dot: "bg-emerald-500" };
+  }
+}
+
+export function normalizeUrl(input: string): string {
+  let url = input.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  try {
+    return new URL(url).toString().replace(/\/$/, "");
+  } catch {
+    return url;
+  }
+}
+
+export function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }

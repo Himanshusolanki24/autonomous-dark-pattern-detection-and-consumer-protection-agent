@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ShieldAlert, TriangleAlert, XCircle, Info } from "lucide-react";
+import { UserCheck, TriangleAlert, X, Check, Ban, Info, ShieldAlert } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { demoSimulator } from "@/lib/services/simulator";
 import { approveSession, stopSession } from "@/lib/services/agentService";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function ApprovalModal() {
   const approvalRequired = useAgentStore((s) => s.approvalRequired);
@@ -15,44 +16,49 @@ export function ApprovalModal() {
   const setApprovalRequired = useAgentStore((s) => s.setApprovalRequired);
   const setStatus = useAgentStore((s) => s.setStatus);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<"approve" | "stop" | null>(null);
 
   const sessionId = task?.id;
 
   const approve = async () => {
     setError(null);
-    if (!live || !sessionId) {
-      demoSimulator.approve();
-      return;
-    }
+    setLoading("approve");
     try {
-      await approveSession(sessionId);
-      setApprovalRequired(false);
-      setStatus("running");
+      if (live && sessionId) {
+        await approveSession(sessionId);
+        setApprovalRequired(false);
+        setStatus("running");
+      } else {
+        demoSimulator.approve();
+      }
     } catch {
-      setError("Could not approve — the backend is not reachable.");
+      setError("Could not approve — the backend is not reachable. Please try again.");
+    } finally {
+      setLoading(null);
     }
   };
 
   const stop = async () => {
     setError(null);
-    if (!live || !sessionId) {
-      demoSimulator.stopAgent();
-      return;
-    }
+    setLoading("stop");
     try {
-      await stopSession(sessionId);
-      setApprovalRequired(false);
-      demoSimulator.reset();
+      if (live && sessionId) {
+        await stopSession(sessionId);
+        setApprovalRequired(false);
+      } else {
+        demoSimulator.stopAgent();
+      }
     } catch {
-      setError("Could not stop the agent — the backend is not reachable.");
+      setError("Could not stop the agent — the backend may be unreachable.");
+    } finally {
+      setLoading(null);
     }
   };
 
+  // Trap focus
   useEffect(() => {
     if (!approvalRequired) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") e.preventDefault();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") e.preventDefault(); };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [approvalRequired]);
@@ -65,85 +71,129 @@ export function ApprovalModal() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-title"
+        aria-describedby="approval-desc"
       >
         <motion.div
-          initial={{ scale: 0.96, y: 12, opacity: 0 }}
+          initial={{ scale: 0.95, y: 16, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
-          exit={{ scale: 0.96, y: 12, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="w-full max-w-md overflow-hidden rounded-2xl border border-red-200 bg-surface shadow-2xl"
+          exit={{ scale: 0.95, y: 16, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl"
         >
-          <div className="border-b border-red-100 bg-red-50 px-6 py-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                <ShieldAlert className="h-4 w-4 text-red-600" />
-              </span>
-              <div>
-                <h2 id="approval-title" className="text-base font-semibold text-red-900">
-                  Your approval is required
-                </h2>
-                <p className="text-xs text-red-700/80">
-                  The agent has navigated the cancellation flow.
-                </p>
-              </div>
+          {/* Header */}
+          <div className="flex items-start gap-4 border-b border-zinc-100 bg-zinc-50 px-6 py-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground shadow-sm">
+              <UserCheck className="h-5 w-5 text-white" aria-hidden="true" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                Human Approval Required
+              </p>
+              <h2 id="approval-title" className="mt-0.5 text-base font-semibold text-foreground">
+                Confirm this action
+              </h2>
             </div>
+            <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Paused
+            </span>
           </div>
 
           <div className="px-6 py-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Final action
+            {/* Action summary */}
+            <p id="approval-desc" className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+              Pending action
             </p>
-            <p className="mt-1 text-lg font-semibold text-foreground">
-              Cancel {task?.service ?? "Premium"}{" "}
-              <span className="font-normal text-zinc-500">
-                {task?.plan ?? "Subscription"}
+            <p className="mt-1.5 text-lg font-semibold text-foreground">
+              Cancel{" "}
+              <span className="text-zinc-500 font-normal">
+                {task?.service ?? "Subscription"} · {task?.plan ?? "Plan"}
               </span>
             </p>
 
-            <div className="mt-4 space-y-2.5 rounded-xl border border-border bg-zinc-50 p-4">
-              <p className="text-xs font-semibold text-zinc-500">What will happen</p>
-              <ul className="space-y-2 text-sm text-zinc-700">
-                <li className="flex items-start gap-2">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
-                  Premium access will end according to the provider&apos;s policy.
+            {/* What will happen */}
+            <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                What will happen
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2.5 text-[13px] text-zinc-600">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-300" aria-hidden="true" />
+                  The cancellation request will be submitted to {task?.service ?? "the service"}.
                 </li>
-                <li className="flex items-start gap-2">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
-                  The cancellation request will be submitted.
+                <li className="flex items-start gap-2.5 text-[13px] text-zinc-600">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-300" aria-hidden="true" />
+                  Access may end according to the service's cancellation policy.
                 </li>
-                <li className="flex items-start gap-2 text-red-700">
-                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <li className="flex items-start gap-2.5 text-[13px] font-medium text-amber-700">
+                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
                   This action may not be reversible.
                 </li>
               </ul>
             </div>
 
-            <div className="mt-5 flex flex-col gap-2">
-              {error && (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {error}
-                </p>
-              )}
+            {/* Reassurance note */}
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-blue-100 bg-brand-soft px-3 py-2.5">
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+              <p className="text-[11px] text-blue-700 leading-5">
+                The agent is paused and will not submit anything until you explicitly approve.
+              </p>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" aria-hidden="true" />
+                <p className="text-[12px] text-red-700">{error}</p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="mt-5 flex flex-col gap-2.5">
               <Button
-                variant="destructive"
-                size="lg"
                 onClick={() => void approve()}
+                disabled={loading !== null}
+                className="h-11 w-full bg-foreground text-white hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-brand"
                 autoFocus
               >
-                Cancel Subscription
+                {loading === "approve" ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
+                    Approving…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    Approve — Cancel Subscription
+                  </span>
+                )}
               </Button>
-              <Button variant="outline" size="lg" onClick={() => void stop()}>
-                <XCircle className="h-4 w-4" />
-                Stop Agent
+              <Button
+                variant="outline"
+                onClick={() => void stop()}
+                disabled={loading !== null}
+                className="h-11 w-full border-zinc-200 text-zinc-700 hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {loading === "stop" ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" aria-hidden="true" />
+                    Stopping…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Ban className="h-4 w-4" aria-hidden="true" />
+                    Reject — Stop Agent
+                  </span>
+                )}
               </Button>
             </div>
 
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              The agent is paused and will not submit anything until you approve.
+            <p className="mt-3 text-center text-[11px] text-zinc-400">
+              You are the final decision-maker. The agent cannot proceed without your approval.
             </p>
           </div>
         </motion.div>

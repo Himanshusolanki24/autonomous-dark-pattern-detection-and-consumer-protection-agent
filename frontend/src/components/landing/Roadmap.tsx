@@ -1,6 +1,20 @@
-import { ROADMAP } from "./constants";
 import { SectionHeading } from "./section-heading";
 import { Reveal } from "./motion";
+
+const ROADMAP = [
+  {
+    phase: "Now",
+    items: ["2–3 target applications", "Human-confirmed cancellation", "Live dark-pattern detection"],
+  },
+  {
+    phase: "Next",
+    items: ["Browser extension", "Trial-expiry alerts", "More platforms"],
+  },
+  {
+    phase: "Later",
+    items: ["Community pattern library", "Price negotiation", "B2B compliance monitoring"],
+  },
+] as const;
 
 export function Roadmap() {
   return (

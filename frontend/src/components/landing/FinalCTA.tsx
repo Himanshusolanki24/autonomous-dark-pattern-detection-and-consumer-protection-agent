@@ -2,88 +2,100 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ArrowDown } from "lucide-react";
-
-const PATHS = [
-  "M0 120 C 200 40, 320 200, 520 100",
-  "M0 180 C 240 100, 380 260, 560 160",
-  "M0 240 C 180 160, 420 300, 580 220",
-];
+import { ArrowRight, Play } from "lucide-react";
+import { Reveal } from "./motion";
 
 export function FinalCTA() {
   const reduce = useReducedMotion();
 
   return (
-    <section className="relative overflow-hidden border-t border-border bg-foreground text-white">
-      {/* animated navigation-path background */}
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.16]"
+    <section
+      className="relative overflow-hidden border-t border-border bg-foreground text-white"
+      aria-labelledby="cta-heading"
+    >
+      {/* Subtle grid texture */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
         aria-hidden="true"
-        viewBox="0 0 600 360"
-        preserveAspectRatio="none"
-      >
-        {PATHS.map((d, i) => (
-          <motion.path
-            key={i}
-            d={d}
-            fill="none"
-            stroke="url(#cta-grad)"
-            strokeWidth="1.5"
-            strokeDasharray="6 10"
-            animate={reduce ? undefined : { strokeDashoffset: [-80, 40] }}
-            transition={{ duration: 9 + i * 2, repeat: Infinity, ease: "linear" }}
-          />
-        ))}
-        <defs>
-          <linearGradient id="cta-grad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#60a5fa" />
-            <stop offset="100%" stopColor="#fbbf24" />
-          </linearGradient>
-        </defs>
-      </svg>
+      />
+
+      {/* Gradient spots */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 600px 400px at 20% 50%, rgba(37,99,235,0.15) 0%, transparent 70%), radial-gradient(ellipse 500px 300px at 80% 50%, rgba(16,185,129,0.08) 0%, transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
 
       <div className="relative mx-auto max-w-4xl px-4 py-28 text-center sm:px-6 sm:py-36">
+        <Reveal>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            TrapKiller
+          </p>
+        </Reveal>
+
         <motion.h2
+          id="cta-heading"
           initial={reduce ? undefined : { opacity: 0, y: 24 }}
           whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6 }}
-          className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl"
         >
-          Stop fighting the cancellation maze.
+          Take back control of
+          <br />
+          the interface.
         </motion.h2>
+
         <motion.p
           initial={reduce ? undefined : { opacity: 0, y: 16 }}
           whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mx-auto mt-5 max-w-xl text-lg text-zinc-300"
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto mt-6 max-w-xl text-lg text-zinc-400 leading-relaxed"
         >
-          Let an agent do the tedious work. Keep the final decision yours.
+          Understand what the interface is asking. See the evidence. Decide
+          what happens next.
         </motion.p>
 
         <motion.div
           initial={reduce ? undefined : { opacity: 0, y: 16 }}
           whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Link
             href="/demo"
-            className="group inline-flex h-13 items-center gap-2 rounded-lg bg-brand px-7 py-3.5 text-base font-medium text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-600 active:scale-[0.98]"
+            className="group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-7 text-base font-semibold text-zinc-900 shadow-lg transition-all hover:bg-zinc-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
           >
-            Launch the Agent
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            Try TrapKiller
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </Link>
-          <a
-            href="#how-it-works"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-7 py-3.5 text-base font-medium text-white transition-colors hover:bg-white/10"
+          <Link
+            href="/demo"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 px-7 text-base font-medium text-white transition-colors hover:bg-white/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            See How It Works
-            <ArrowDown className="h-4 w-4" />
-          </a>
+            <Play className="h-4 w-4" aria-hidden="true" />
+            View Demo
+          </Link>
         </motion.div>
+
+        <Reveal delay={0.25}>
+          <p className="mt-10 text-[12px] text-zinc-500">
+            Detection results are automated estimates. Not every website uses deceptive patterns.
+          </p>
+        </Reveal>
       </div>
     </section>
   );

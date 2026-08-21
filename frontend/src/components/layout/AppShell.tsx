@@ -14,6 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  // ⌘K command palette
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -27,18 +28,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
+      {/* Skip to main content */}
+      <a
+        href="#main-content"
+        className="skip-link focus:block"
+      >
+        Skip to main content
+      </a>
+
+      <div className="flex h-screen overflow-hidden bg-zinc-50">
+        {/* Sidebar */}
+        <Sidebar
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((v) => !v)}
+        />
+
+        {/* Mobile nav drawer */}
         <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        {/* Main workspace */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Topbar onMenu={() => setMobileOpen(true)} />
-          <main className={cn("flex-1 overflow-y-auto", collapsed && "max-w-none")}>
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className={cn(
+              "flex-1 overflow-y-auto focus:outline-none",
+              collapsed && "max-w-none"
+            )}
+          >
             {children}
           </main>
         </div>
       </div>
 
+      {/* Global overlays — always rendered outside the scroll container */}
       <ApprovalModal />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </TooltipProvider>

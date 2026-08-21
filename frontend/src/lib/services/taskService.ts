@@ -3,7 +3,7 @@
 import { api } from "@/lib/api";
 import type { ActivityRecord, CancellationTask } from "@/lib/types";
 import { hostnameOf } from "@/lib/utils";
-import { mockActivity, mockTasks } from "@/lib/data";
+import { demoTasks, demoActivity } from "@/lib/data";
 import { STAGE_MAP } from "@/lib/services/agentService";
 
 export interface BackendTask {
@@ -66,7 +66,7 @@ export async function fetchTasks(): Promise<CancellationTask[]> {
     const res = await api.get<{ tasks: BackendTask[] }>("/api/cancellations");
     return (res.tasks ?? []).map(mapTask);
   } catch {
-    return mockTasks.map((t) => ({ ...t }));
+    return demoTasks.map((t) => ({ ...t }));
   }
 }
 
@@ -84,7 +84,7 @@ export async function fetchActivity(): Promise<ActivityRecord[]> {
         status: EVENT_STATUS_MAP[a.status ?? ""] ?? "success",
       }));
   } catch {
-    return mockActivity.map((a) => ({ ...a }));
+    return demoActivity.map((a) => ({ ...a }));
   }
 }
 

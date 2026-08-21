@@ -35,14 +35,14 @@ export function ScannerInput({
         />
       </div>
       <Button type="submit" disabled={busy || !value.trim()} className="sm:w-44">
-        {busy ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Analyzing…
-          </>
-        ) : (
-          "Analyze Page"
-        )}
+{busy ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Investigating…
+            </>
+          ) : (
+            "Start Investigation"
+          )}
       </Button>
     </form>
   );

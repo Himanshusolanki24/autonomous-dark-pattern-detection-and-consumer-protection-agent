@@ -50,10 +50,11 @@ export const STATUS_LABELS: Record<string, string> = {
   blocked: "Blocked",
 };
 
+/** Demo-mode service config. Uses a fictional service — not any real brand. */
 export const DEMO_SERVICE = {
-  service: "Netflix",
+  service: "StreamFlow",
   plan: "Premium Subscription",
-  price: "₹649 / month",
-  domain: "netflix.com",
-  url: "https://www.netflix.com/account",
+  price: "₹549 / month",
+  domain: "streamflow.example.com",
+  url: "http://localhost:3001/demo-target/account",
 };

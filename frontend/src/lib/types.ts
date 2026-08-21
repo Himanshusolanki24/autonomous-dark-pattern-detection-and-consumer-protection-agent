@@ -102,6 +102,32 @@ export interface ActivityRecord {
   status: "success" | "warning" | "error" | "verified";
 }
 
+export interface ElementPosition {
+  role: string;
+  text: string;
+  box: { x: number; y: number; width: number; height: number } | null;
+}
+
+export interface PerceptionData {
+  url: string;
+  title: string;
+  visibleText: string;
+  elements: ElementPosition[];
+  pageState?: "success" | "confirmation" | "plan_selection" | "unknown";
+}
+
+export interface Evidence {
+  pattern: string;
+  confidence: number;
+  risk: Severity;
+  whyFlagged: string;
+  visibleText: string[];
+  affectedElement: string;
+  pageLocation: string;
+  source: "dom" | "visible_text" | "accessibility_tree" | "screenshot";
+  selector: string | null;
+}
+
 export interface RiskOverview {
   overall: Severity;
   totalPatterns: number;

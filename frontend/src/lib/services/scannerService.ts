@@ -9,10 +9,24 @@ export interface ScanProgress {
   status: "done" | "running" | "pending";
 }
 
+export interface ElementPosition {
+  role: string;
+  text: string;
+  box: { x: number; y: number; width: number; height: number } | null;
+}
+
+export interface PerceptionData {
+  url: string;
+  title: string;
+  visibleText: string;
+  elements: ElementPosition[];
+}
+
 export interface ScanResult {
   url: string;
   risk: RiskOverview;
   patterns: DarkPattern[];
+  perception: PerceptionData;
 }
 
 interface BackendScanDetection {
@@ -21,6 +35,7 @@ interface BackendScanDetection {
   confidence: number;
   explanation: string;
   elementText: string | null;
+  elementRole: string | null;
 }
 
 interface BackendScan {
@@ -45,6 +60,25 @@ export async function scanUrl(url: string): Promise<ScanResult> {
       "This pattern was flagged automatically. Review the evidence before proceeding.",
   }));
 
+const perception: PerceptionData = {
+    url: res.url,
+    title: res.title,
+    visibleText: res.detections.length > 0 ? res.detections[0]?.elementText ?? "" : "",
+    elements: (() => {
+      if (res.detections.length > 0 && res.detections[0]?.elementText) {
+        const mapped = res.detections.map((d) => {
+          if (d.elementText) {
+            return { role: d.elementRole ?? "text", text: d.elementText, box: null };
+          }
+          return null;
+        });
+        const filtered = mapped.filter((e) => e != null);
+        return filtered as ElementPosition[];
+      }
+      return [];
+    })(),
+  };
+
   const overall = mapRisk(res.overallRisk);
   const risk: RiskOverview = {
     overall,
@@ -55,7 +89,7 @@ export async function scanUrl(url: string): Promise<ScanResult> {
       patterns.filter((p) => p.severity === "medium").length,
   };
 
-  return { url: res.url, risk, patterns };
+  return { url: res.url, risk, patterns, perception };
 }
 
 function mapRisk(level: string): RiskOverview["overall"] {

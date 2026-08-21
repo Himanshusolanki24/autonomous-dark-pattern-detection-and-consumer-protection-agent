@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { demoSimulator } from "@/lib/services/simulator";
-import { mockTasks } from "@/lib/data";
+import { demoTasks } from "@/lib/data";
 import { AgentPipeline } from "@/components/agent/AgentPipeline";
 import { AgentEventStream } from "@/components/agent/AgentEventStream";
 import { AgentDecision } from "@/components/agent/AgentDecision";
@@ -60,7 +60,7 @@ export default function DemoPage() {
 
   const start = useCallback(() => {
     setFinished(false);
-    demoSimulator.start(mockTasks[0]);
+    demoSimulator.start(demoTasks[0]);
     sync();
   }, [sync]);
 

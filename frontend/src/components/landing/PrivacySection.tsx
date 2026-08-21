@@ -1,7 +1,34 @@
-import { PRIVACY_ITEMS } from "./constants";
+import { ShieldCheck, Landmark, UserCheck, CameraOff } from "lucide-react";
 import { SectionHeading } from "./section-heading";
 import { Reveal } from "./motion";
 import { cn } from "@/lib/utils";
+
+const PRIVACY_ITEMS = [
+  {
+    icon: ShieldCheck,
+    title: "No stored passwords",
+    body: "The agent operates within the user's authenticated browser session. Credentials never touch our servers.",
+    tone: "bg-blue-50 text-blue-600",
+  },
+  {
+    icon: Landmark,
+    title: "No bank connection",
+    body: "The MVP doesn't require financial-account access. Cancellation flows run entirely on the service's own website.",
+    tone: "bg-indigo-50 text-indigo-600",
+  },
+  {
+    icon: UserCheck,
+    title: "Human approval",
+    body: "Irreversible cancellation always requires explicit confirmation. Nothing destructive runs automatically.",
+    tone: "bg-amber-50 text-amber-600",
+  },
+  {
+    icon: CameraOff,
+    title: "Temporary proof",
+    body: "Cancellation evidence can be retained only for a limited period, then deleted.",
+    tone: "bg-emerald-50 text-emerald-600",
+  },
+] as const;
 
 export function PrivacySection() {
   return (

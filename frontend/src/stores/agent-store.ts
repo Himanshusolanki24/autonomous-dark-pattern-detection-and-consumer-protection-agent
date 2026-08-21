@@ -26,12 +26,6 @@ export interface AgentSession {
   live: boolean;
 }
 
-const initialBrowser: BrowserState = {
-  url: "https://www.netflix.com/browse",
-  title: "Netflix",
-  screen: "plans",
-};
-
 const initialStages: Record<AgentId, StageState> = {
   perception: "idle",
   detection: "idle",
@@ -61,7 +55,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
   events: [],
   decision: null,
   patterns: [],
-  browser: initialBrowser,
+  browser: {} as BrowserState,
   approvalRequired: false,
   verification: null,
   live: false,
@@ -74,7 +68,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
       events: [],
       decision: null,
       patterns: [],
-      browser: initialBrowser,
+      browser: {} as BrowserState,
       approvalRequired: false,
       verification: null,
       live: false,
@@ -88,7 +82,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
       events: [],
       decision: null,
       patterns: [],
-      browser: initialBrowser,
+      browser: {} as BrowserState,
       approvalRequired: false,
       verification: null,
       live: false,

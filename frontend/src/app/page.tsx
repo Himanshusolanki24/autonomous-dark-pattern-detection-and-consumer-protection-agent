@@ -3,15 +3,14 @@ import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { Hero } from "@/components/landing/Hero";
 import { TrustStrip } from "@/components/landing/TrustStrip";
 import { ProblemSection } from "@/components/landing/ProblemSection";
-import { AgentSection } from "@/components/landing/AgentSection";
+import { SeeTheTrap } from "@/components/landing/SeeTheTrap";
 import { AgentPipeline } from "@/components/landing/AgentPipeline";
-import { DetectionSection } from "@/components/landing/DetectionSection";
-import { LiveDemo } from "@/components/landing/LiveDemo";
+import { AgentDifference } from "@/components/landing/AgentDifference";
+import { EvidenceSection } from "@/components/landing/EvidenceSection";
 import { SafetySection } from "@/components/landing/SafetySection";
-import { PrivacySection } from "@/components/landing/PrivacySection";
-import { RegulatorySection } from "@/components/landing/RegulatorySection";
-import { VisionSection } from "@/components/landing/VisionSection";
-import { Roadmap } from "@/components/landing/Roadmap";
+import { VerificationSection } from "@/components/landing/VerificationSection";
+import { SecuritySection } from "@/components/landing/SecuritySection";
+import { DemoSection } from "@/components/landing/DemoSection";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
 
@@ -20,19 +19,18 @@ export default function LandingPage() {
     <>
       <ScrollProgress />
       <Navbar />
-      <main>
+      <main id="main-content">
         <Hero />
         <TrustStrip />
         <ProblemSection />
-        <AgentSection />
+        <SeeTheTrap />
         <AgentPipeline />
-        <DetectionSection />
-        <LiveDemo />
+        <AgentDifference />
+        <EvidenceSection />
         <SafetySection />
-        <PrivacySection />
-        <RegulatorySection />
-        <VisionSection />
-        <Roadmap />
+        <VerificationSection />
+        <SecuritySection />
+        <DemoSection />
         <FinalCTA />
       </main>
       <Footer />
