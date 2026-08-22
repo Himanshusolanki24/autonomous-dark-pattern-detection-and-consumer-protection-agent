@@ -8,7 +8,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { browserManager } from "@/lib/browser/manager";
 import { createGraph } from "./graph";
-import type { AgentState } from "./state";
+import { AgentCancelledError, type AgentState } from "./state";
 import { emitEvent } from "./events";
 import { jobQueue } from "@/lib/queue/runner";
 import { validateTargetUrl } from "@/lib/security/ssrf";
@@ -131,19 +131,33 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
     finalState = await graph.invoke(state, { configurable: ctx });
     await persistFinalState(input.sessionId, finalState);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await emitEvent(supabase, input.sessionId, {
-      userId: input.userId,
-      agent: "planning",
-      eventType: "task_failed",
-      message,
-      status: "failed",
-    });
-    await persistFinalState(input.sessionId, {
-      ...state,
-      status: "failed",
-      errorMessage: message,
-    });
+    // A human stop (cooperative cancel, or a mid-action browser teardown that
+    // surfaces as a generic error) must not be mislabeled as a failure. The
+    // /stop route already recorded "cancelled" + emitted the event, so re-read
+    // the DB and leave it alone if so.
+    const { data: current } = await supabase
+      .from("agent_sessions")
+      .select("status")
+      .eq("id", input.sessionId)
+      .maybeSingle();
+    if (err instanceof AgentCancelledError || current?.status === "cancelled") {
+      finalState = { ...state, status: "cancelled" };
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      await emitEvent(supabase, input.sessionId, {
+        userId: input.userId,
+        agent: "planning",
+        eventType: "task_failed",
+        message,
+        status: "failed",
+      });
+      await persistFinalState(input.sessionId, {
+        ...state,
+        status: "failed",
+        errorMessage: message,
+      });
+      finalState = { ...state, status: "failed", errorMessage: message };
+    }
   } finally {
     if (finalState?.status !== "approval_required") {
       await browserManager.destroySession(input.sessionId, "completed");

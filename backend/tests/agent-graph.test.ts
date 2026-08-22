@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildGraph, GRAPH, routeAfterAct, routeAfterPlan } from "@/lib/agent/state";
+import { AgentCancelledError, buildGraph, GRAPH, routeAfterAct, routeAfterPlan } from "@/lib/agent/state";
 import type { AgentState } from "@/lib/agent/state";
 import type { RuntimeContext, NodeHandler } from "@/lib/agent/graph";
 
@@ -114,6 +114,33 @@ describe("buildGraph wiring", () => {
     expect(final.status).toBe("completed");
     // plan observed completed → routed to complete node
     expect(seen).toContain(GRAPH.COMPLETE);
+  });
+
+  it("aborts a node when the session was stopped by a human", async () => {
+    let ran = false;
+    // Stub supabase reporting the session as cancelled (as /stop would set it).
+    const supabase = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: { status: "cancelled" } }) }),
+        }),
+      }),
+    };
+    const graph = buildGraph({
+      perceive: async (s) => { ran = true; return s; },
+      detect: async (s) => s,
+      plan: async (s) => s,
+      act: async (s) => s,
+      approval_gate: async (s) => s,
+      verify: async (s) => s,
+      complete: async (s) => s,
+      fail: async (s) => s,
+    });
+
+    await expect(
+      graph.invoke(baseState(), { configurable: { supabase } as unknown as RuntimeContext })
+    ).rejects.toBeInstanceOf(AgentCancelledError);
+    expect(ran).toBe(false); // short-circuited before the node body ran
   });
 
   it("pauses at approval_required when a final action is pending", async () => {

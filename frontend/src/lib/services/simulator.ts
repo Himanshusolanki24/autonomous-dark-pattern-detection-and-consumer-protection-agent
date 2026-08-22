@@ -160,6 +160,7 @@ export class DemoSimulator {
     if (!s.approvalRequired) return;
     s.setApprovalRequired(false);
     s.setStatus("running");
+    this.paused = false;
     this.scheduleNext();
   }
 
@@ -355,6 +356,7 @@ export class DemoSimulator {
           this.store().setStatus("blocked");
           this.store().setApprovalRequired(true);
           this.event(makeEvent("verification", "Awaiting human approval", "warning"));
+          this.paused = true;
         },
       },
 

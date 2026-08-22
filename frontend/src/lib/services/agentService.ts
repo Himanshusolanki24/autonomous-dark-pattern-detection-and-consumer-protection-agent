@@ -196,20 +196,23 @@ export function startPolling(
         s.setStage("perception", "completed");
         s.setStage("detection", "completed");
         s.setStage("planning", "completed");
+        s.setStage("action", "completed");
         s.setStage("verification", "completed");
       }
 
       // Update browser preview state
       if (session.targetUrl) {
-        const screen: BrowserScreen = session.targetUrl.includes("confirm")
-          ? "confirm"
-          : session.targetUrl.includes("success")
+        const screen: BrowserScreen = 
+          session.status === "completed" || session.targetUrl.includes("success")
           ? "success"
+          : session.targetUrl.includes("confirm")
+          ? "confirm"
           : "account";
         s.setBrowser({
           url: session.targetUrl,
           title: session.targetUrl ? new URL(session.targetUrl).hostname : "Live Browser",
           screen,
+          isScanning: session.status === "running",
         });
       }
 

@@ -23,6 +23,10 @@ const EXPLICIT_CANCEL = [
   "cancel subscription",
 ];
 
+// The irreversible final submit. A human MUST approve before this runs — it is
+// routed to the approval gate instead of executed directly.
+const FINAL_CONFIRM = ["yes, cancel", "confirm cancellation", "confirm my cancellation"];
+
 // Navigation links that enter a cancellation flow (still explicit enough).
 const CANCEL_NAV = ["cancel subscription", "cancel membership", "unsubscribe", "cancel my plan"];
 
@@ -130,11 +134,19 @@ export const planNode: NodeHandler = async (
     EXPLICIT_CANCEL.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m))
   );
   if (explicitEl) {
+    const label = `${explicitEl.text} ${explicitEl.ariaLabel ?? ""}`.toLowerCase();
     action = {
       type: "click",
       target: explicitEl.text.slice(0, 100),
       reason: `Click cancellation option: "${explicitEl.text.slice(0, 60)}"`,
     };
+    // The irreversible submit is parked for human approval (unless the human has
+    // already approved this run). routeAfterPlan sends pendingFinalAction to the
+    // approval gate on the first pass, and to ACT once resumeApproval is set.
+    if (FINAL_CONFIRM.some((m) => label.includes(m)) && state.resumeApproval !== "approved") {
+      decision = `Awaiting human approval before: "${explicitEl.text.slice(0, 60)}"`;
+      return { currentStage: "planning", pendingFinalAction: action, lastDecision: decision };
+    }
     decision = `Clicking "${explicitEl.text.slice(0, 60)}"`;
     return { currentStage: "planning", lastAction: action, lastDecision: decision };
   }

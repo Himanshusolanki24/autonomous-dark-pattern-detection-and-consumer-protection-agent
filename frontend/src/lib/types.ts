@@ -82,6 +82,7 @@ export interface BrowserState {
   url: string;
   title: string;
   screen: BrowserScreen;
+  isScanning?: boolean;
 }
 
 export interface VerificationResult {

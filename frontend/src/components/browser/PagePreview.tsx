@@ -1,9 +1,59 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { BrowserState, PatternType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { BACKEND_URL } from "@/lib/api";
 import { DarkPatternHighlight } from "./DarkPatternHighlight";
+
+/**
+ * LiveShot — server-rendered screenshot of a real URL. Uses the backend
+ * Playwright browser so sites that block iframe embedding (X-Frame-Options)
+ * still render, unlike a client-side <iframe>.
+ */
+function LiveShot({ url, isScanning }: { url: string; isScanning?: boolean }) {
+  const [state, setState] = useState<"loading" | "ok" | "error">("loading");
+  const src = `${BACKEND_URL}/api/scanner/screenshot?url=${encodeURIComponent(url)}`;
+
+  return (
+    <div className="relative min-h-[420px] bg-white">
+      {state === "loading" && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white text-zinc-400">
+          <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
+          <p className="text-xs">Rendering {url}…</p>
+        </div>
+      )}
+      {state === "error" ? (
+        <div className="flex min-h-[420px] flex-col items-center justify-center gap-2 px-6 text-center text-zinc-400">
+          <p className="text-sm font-medium text-zinc-600">Could not render this page</p>
+          <p className="text-xs">The site may be unreachable or blocked navigation.</p>
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={src}
+          src={src}
+          alt={`Live view of ${url}`}
+          className="w-full"
+          onLoad={() => setState("ok")}
+          onError={() => setState("error")}
+        />
+      )}
+      {isScanning && state === "ok" && (
+        <motion.div
+          initial={{ top: "0%" }}
+          animate={{ top: "100%" }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+          className="pointer-events-none absolute left-0 z-50 h-[2px] w-full bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.6)]"
+        />
+      )}
+      <p className="border-t border-zinc-100 px-3 py-1.5 text-[10px] text-zinc-400">
+        Live server-rendered snapshot of the target page.
+      </p>
+    </div>
+  );
+}
 
 /**
  * PagePreview — DEMO MODE ONLY
@@ -26,7 +76,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           </span>
         </nav>
       </header>
-      <div className="flex-1 p-4 sm:p-6">{children}</div>
+      <div className="relative flex-1 p-4 sm:p-6">{children}</div>
     </div>
   );
 }
@@ -192,10 +242,11 @@ function SuccessPage() {
         </svg>
       </div>
       <h2 className="mt-4 text-xl font-semibold">Membership Cancelled</h2>
-      <p className="mt-1 text-sm text-zinc-500">Your Premium membership has been cancelled.</p>
+      <p className="mt-1 text-sm text-zinc-500">Your autopay is off and your cancellation is also done.</p>
       <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-left text-sm">
         <div className="flex justify-between"><span className="text-zinc-500">Plan</span><span>Premium · 4K</span></div>
         <div className="mt-1 flex justify-between"><span className="text-zinc-500">Status</span><span className="font-medium text-emerald-600">Cancelled</span></div>
+        <div className="mt-1 flex justify-between"><span className="text-zinc-500">Autopay</span><span className="font-medium text-zinc-900">Disabled</span></div>
         <div className="mt-1 flex justify-between"><span className="text-zinc-500">Access until</span><span>16 Sep 2026</span></div>
       </div>
     </div>
@@ -210,6 +261,13 @@ export function PagePreview({
   onElementClick?: (pattern: PatternType) => void;
 }) {
   const screen = browser.screen;
+
+  // Any real http(s) URL renders live via a backend Playwright screenshot —
+  // works even for sites that block iframe embedding (X-Frame-Options).
+  const url = browser.url?.trim();
+  if (url && /^https?:\/\//i.test(url) && url !== "about:blank") {
+    return <LiveShot url={url} isScanning={browser.isScanning} />;
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -232,6 +290,15 @@ export function PagePreview({
             <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 text-zinc-400">
               <p className="text-sm">No page loaded in this session.</p>
             </div>
+          )}
+          
+          {browser.isScanning && (
+            <motion.div 
+              initial={{ top: "0%" }}
+              animate={{ top: "100%" }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+              className="pointer-events-none absolute left-0 z-50 h-[2px] w-full bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.6)]" 
+            />
           )}
         </Shell>
       </motion.div>

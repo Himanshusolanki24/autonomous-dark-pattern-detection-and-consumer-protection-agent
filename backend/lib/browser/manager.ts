@@ -89,6 +89,38 @@ class BrowserManager {
     return this.sessions.get(sessionId) ?? null;
   }
 
+  /**
+   * One-off screenshot of a URL in a throwaway context. Used by the live page
+   * preview so sites that block iframe embedding (X-Frame-Options) still render.
+   */
+  async screenshot(url: string): Promise<Buffer> {
+    const browser = await this.getBrowser();
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    });
+    try {
+      const page = await context.newPage();
+      page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
+      try {
+        await page.goto(url, { waitUntil: "load", timeout: 20_000 });
+      } catch {
+        // Render whatever loaded even if the navigation didn't fully settle.
+      }
+      // Let SPA content hydrate, then settle network (lazy images, fonts).
+      await page.waitForTimeout(2000);
+      try {
+        await page.waitForLoadState("networkidle", { timeout: 6_000 });
+      } catch {
+        // networkidle can never fire on sites with long-poll/analytics — fine.
+      }
+      return await page.screenshot({ type: "png", fullPage: true });
+    } finally {
+      await context.close().catch(() => {});
+    }
+  }
+
   /** Destroy the context. Cookies are never persisted to shared storage. */
   async destroySession(sessionId: string, reason = "completed"): Promise<void> {
     const handle = this.sessions.get(sessionId);

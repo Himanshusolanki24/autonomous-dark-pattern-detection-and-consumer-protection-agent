@@ -45,6 +45,14 @@ export const AgentStateAnnotation = Annotation.Root({
 
 export type AgentState = typeof AgentStateAnnotation.State;
 
+/** Thrown by a node when a human has stopped the session (status → cancelled). */
+export class AgentCancelledError extends Error {
+  constructor() {
+    super("Session cancelled by user");
+    this.name = "AgentCancelledError";
+  }
+}
+
 export const GRAPH = {
   PERCEIVE: "perceive",
   DETECT: "detect",
@@ -122,6 +130,18 @@ function makeNode(
   }
   return async (state: AgentState, config: { configurable?: Record<string, unknown> }) => {
     const ctx = config.configurable as unknown as RuntimeContext;
+    // Cooperative human cancel: bail before starting any node (and any LLM/
+    // browser work it does) if the session was stopped. DB is the source of
+    // truth — the /stop route sets status = "cancelled". Best-effort: if the
+    // read fails, the /stop browser-kill + runner catch still end the run.
+    if (ctx.supabase) {
+      const { data } = await ctx.supabase
+        .from("agent_sessions")
+        .select("status")
+        .eq("id", state.sessionId)
+        .maybeSingle();
+      if (data?.status === "cancelled") throw new AgentCancelledError();
+    }
     return handler(state, ctx);
   };
 }

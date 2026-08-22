@@ -23,6 +23,7 @@ import {
   stopSession,
 } from "@/lib/services/agentService";
 import { startCancellation } from "@/lib/services/taskService";
+import { BACKEND_URL } from "@/lib/api";
 import { cn, nowIso, hostnameOf } from "@/lib/utils";
 import { AgentPipeline } from "@/components/agent/AgentPipeline";
 import { AgentEventStream } from "@/components/agent/AgentEventStream";
@@ -54,6 +55,27 @@ export default function AgentPage() {
     >
       <AgentPageContent />
     </Suspense>
+  );
+}
+
+/** Cancellation proof screenshot captured by the verification stage. */
+function ProofShot({ sessionId }: { sessionId: string }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return null;
+  const src = `${BACKEND_URL}/api/agent/${sessionId}/proof`;
+  return (
+    <div className="mt-2 overflow-hidden rounded-lg border border-zinc-200">
+      <p className="border-b border-zinc-100 bg-zinc-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+        Cancellation Screenshot
+      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Cancellation confirmation screenshot"
+        className="w-full"
+        onError={() => setOk(false)}
+      />
+    </div>
   );
 }
 
@@ -728,6 +750,7 @@ function AgentPageContent() {
                     </p>
                   </div>
                 )}
+                {store.task && <ProofShot sessionId={store.task.id} />}
               </div>
             </div>
           )}

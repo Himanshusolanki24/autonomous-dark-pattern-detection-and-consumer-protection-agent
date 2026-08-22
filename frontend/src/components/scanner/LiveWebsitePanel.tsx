@@ -105,7 +105,7 @@ export function LiveWebsitePanel({
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-zinc-500">URL</span>
-        <span className="font-mono text-zinc-800 truncate w-64">{url}</span>
+        <span className="font-mono text-zinc-800 truncate w-full min-w-max">{url}</span>
       </div>
 
       <div className="relative rounded-xl border border-border bg-zinc-50 overflow-hidden">

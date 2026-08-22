@@ -29,16 +29,13 @@ export function EvidenceDrawer({
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, transform: "scale(0.95)" }}
+      animate={{ opacity: 1, transform: "scale(1)" }}
+      exit={{ opacity: 0, transform: "scale(0.95)" }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       <motion.div
-        className="relative bg-white rounded-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl transform scale-95 opacity-0"
-        animate={{ transform: "scale(1)", opacity: 1 }}
-        exit={{ transform: "scale(0.95)", opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="relative bg-white rounded-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl transform"
       >
         <div className="relative p-6">
           <button

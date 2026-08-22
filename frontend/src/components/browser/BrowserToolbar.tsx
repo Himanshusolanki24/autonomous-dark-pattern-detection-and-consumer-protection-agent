@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { ArrowLeft, ArrowRight, RotateCw, Lock, X } from "lucide-react";
 
 export function BrowserToolbar({
@@ -9,6 +10,12 @@ export function BrowserToolbar({
   url: string;
   onNavigate?: (url: string) => void;
 }) {
+  const [inputValue, setInputValue] = useState(url || "");
+
+  useEffect(() => {
+    setInputValue(url || "");
+  }, [url]);
+
   return (
     <div className="flex items-center gap-2 border-b border-border bg-zinc-50 px-3 py-2">
       <div className="flex items-center gap-0.5">
@@ -37,16 +44,24 @@ export function BrowserToolbar({
       <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5">
         <Lock className="h-3 w-3 shrink-0 text-emerald-500" />
         <input
-          value={url}
-          readOnly
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onNavigate?.(inputValue);
+            }
+          }}
           aria-label="Current page URL"
           className="min-w-0 flex-1 bg-transparent font-mono text-xs text-zinc-600 focus:outline-none"
         />
-        {url && (
+        {inputValue && (
           <button
             className="rounded p-0.5 text-zinc-400 hover:text-zinc-600"
             aria-label="Clear address"
-            onClick={() => onNavigate?.("about:blank")}
+            onClick={() => {
+              setInputValue("");
+              onNavigate?.("about:blank");
+            }}
           >
             <X className="h-3 w-3" />
           </button>
