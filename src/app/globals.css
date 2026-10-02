@@ -1,31 +1,58 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* ── Color tokens ────────────────────────────── */
-  --color-background: #f8f8f9;
+  /* ── Color tokens: "marked evidence" ─────────────
+     paper + ink, an ink-blue brand, and a highlighter
+     marker reserved for things the agent caught. */
+  --color-background: #f4f5f2;
   --color-surface: #ffffff;
-  --color-foreground: #15171c;
-  --color-muted: #f2f2f4;
-  --color-muted-foreground: #71717a;
-  --color-border: #e4e4e7;
-  --color-border-strong: #d4d4d8;
+  --color-foreground: #151a2d;
+  --color-muted: #eef0ec;
+  --color-muted-foreground: #6f7581;
+  --color-border: #e1e4df;
+  --color-border-strong: #c9cdc7;
 
-  /* Brand: TrapKiller blue */
-  --color-brand: #2563eb;
-  --color-brand-soft: #eff4ff;
-  --color-brand-muted: #dbeafe;
+  --color-brand: #2f3f95;
+  --color-brand-soft: #f1f3fb;
+  --color-brand-muted: #e2e6f6;
+  --color-marker: #ffe15a;
 
   /* Semantic */
-  --color-danger: #dc2626;
-  --color-danger-soft: #fef2f2;
-  --color-warning: #d97706;
-  --color-warning-soft: #fffbeb;
-  --color-success: #16a34a;
-  --color-success-soft: #f0fdf4;
+  --color-danger: #cf3f3f;
+  --color-danger-soft: #fdf1f1;
+  --color-warning: #d9831f;
+  --color-warning-soft: #fdf6ea;
+  --color-success: #1f8a5b;
+  --color-success-soft: #eef8f2;
+
+  /* ponytail: the app uses ~1.7k raw zinc/blue classes across 71 files;
+     re-tuning the scales here re-skins all of them without touching each file. */
+  --color-zinc-50: #f6f7f5;
+  --color-zinc-100: #eef0ec;
+  --color-zinc-200: #e1e4df;
+  --color-zinc-300: #c9cdc7;
+  --color-zinc-400: #9aa0a6;
+  --color-zinc-500: #6f7581;
+  --color-zinc-600: #535967;
+  --color-zinc-700: #3b4150;
+  --color-zinc-800: #262b38;
+  --color-zinc-900: #151a2d;
+  --color-zinc-950: #0e1220;
+  --color-blue-50: #f1f3fb;
+  --color-blue-100: #e2e6f6;
+  --color-blue-200: #c6cdec;
+  --color-blue-300: #9ea9dc;
+  --color-blue-400: #7180c6;
+  --color-blue-500: #4d5fb0;
+  --color-blue-600: #2f3f95;
+  --color-blue-700: #26347d;
+  --color-blue-800: #1f2a63;
+  --color-blue-900: #19214d;
 
   /* ── Typography ──────────────────────────────── */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
 
   /* ── Spacing scale additions ─────────────────── */
   --spacing-18: 4.5rem;
@@ -35,8 +62,15 @@
 /* ── Base ────────────────────────────────────────── */
 
 :root {
-  --background: #f8f8f9;
-  --foreground: #15171c;
+  --background: #f4f5f2;
+  --foreground: #151a2d;
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-bricolage), var(--font-geist-sans), sans-serif;
+  letter-spacing: -0.02em;
 }
 
 * {
