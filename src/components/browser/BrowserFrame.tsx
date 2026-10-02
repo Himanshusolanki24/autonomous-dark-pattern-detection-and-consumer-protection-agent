@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { BrowserState, PatternType } from "@/lib/types";
 import { BrowserToolbar } from "./BrowserToolbar";
 import { PagePreview } from "./PagePreview";
@@ -20,16 +20,15 @@ export function BrowserFrame({
   onElementClick?: (pattern: PatternType) => void;
   header?: React.ReactNode;
 }) {
-  // Paste-a-URL navigation: local override wins until the parent (agent poll /
-  // new session) pushes a fresh browser.url, which resets it.
-  const [override, setOverride] = useState<string | null>(null);
-  useEffect(() => setOverride(null), [browser.url]);
-  const effUrl = override ?? browser.url;
+  // Paste-a-URL navigation: a local override wins only while the parent's url is the one it
+  // was made on. When the agent moves to a new page, the override expires by itself.
+  const [override, setOverride] = useState<{ on: string; url: string } | null>(null);
+  const effUrl = override && override.on === browser.url ? override.url : browser.url;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
       {header}
-      <BrowserToolbar url={effUrl} onNavigate={(u) => setOverride(normalizeUrl(u))} />
+      <BrowserToolbar key={effUrl} url={effUrl} onNavigate={(u) => setOverride({ on: browser.url, url: normalizeUrl(u) })} />
       <div className="max-h-[520px] overflow-y-auto">
         <PagePreview browser={{ ...browser, url: effUrl }} onElementClick={onElementClick} />
       </div>

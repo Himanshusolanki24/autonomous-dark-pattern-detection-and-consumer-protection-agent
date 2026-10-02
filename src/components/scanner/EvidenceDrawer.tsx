@@ -1,13 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, X, CheckCircle, Eye } from "lucide-react";
-import type { DarkPattern, Severity } from "@/lib/types";
+import { AlertTriangle, X, Eye } from "lucide-react";
+import type { DarkPattern } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PATTERN_LABELS } from "@/lib/constants";
 import { ConfidenceBar } from "@/components/ui/confidence-bar";
-import { SEVERITY_LABELS } from "@/lib/constants";
 
 interface EvidenceDrawerProps {
   isOpen: boolean;

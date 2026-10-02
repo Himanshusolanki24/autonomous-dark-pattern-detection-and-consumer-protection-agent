@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCw, Lock, X } from "lucide-react";
 
 export function BrowserToolbar({
@@ -10,11 +10,8 @@ export function BrowserToolbar({
   url: string;
   onNavigate?: (url: string) => void;
 }) {
+  // The parent keys this component by url, so a new page resets the field without an effect.
   const [inputValue, setInputValue] = useState(url || "");
-
-  useEffect(() => {
-    setInputValue(url || "");
-  }, [url]);
 
   return (
     <div className="flex items-center gap-2 border-b border-border bg-zinc-50 px-3 py-2">

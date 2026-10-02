@@ -51,7 +51,7 @@ export default function CancelSubscriptionPage() {
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <p className="mb-6 text-sm text-zinc-500">
-                Are you sure you want to cancel your Pro plan? You'll lose access to premium features immediately.
+                Are you sure you want to cancel your Pro plan? You&apos;ll lose access to premium features immediately.
               </p>
               
               <div className="space-y-3">

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { validateTargetUrl, validateTargetUrlSync, isPrivateAddress } from "@/server/security/ssrf";
 
 describe("isPrivateAddress", () => {
@@ -28,7 +28,18 @@ describe("validateTargetUrlSync", () => {
   });
 });
 
-describe("validateTargetUrl", () => {
+describe("validateTargetUrl (production mode)", () => {
+  // Dev mode deliberately allows localhost so the built-in test site works; these checks
+  // cover the production behaviour, so they switch dev mode off.
+  const saved = process.env.SUPABASE_DEV_MODE;
+  beforeEach(() => {
+    process.env.SUPABASE_DEV_MODE = "false";
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env.SUPABASE_DEV_MODE;
+    else process.env.SUPABASE_DEV_MODE = saved;
+  });
+
   it("rejects loopback hostnames", async () => {
     await expect(validateTargetUrl("http://localhost:3001/x")).rejects.toThrow(/Loopback/);
     await expect(validateTargetUrl("http://127.0.0.1:3000/x")).rejects.toThrow(/not allowed/);
@@ -41,5 +52,17 @@ describe("validateTargetUrl", () => {
 
   it("rejects malformed URLs", async () => {
     await expect(validateTargetUrl("not a url")).rejects.toThrow();
+  });
+});
+describe("validateTargetUrl (dev mode)", () => {
+  it("allows the built-in localhost test site", async () => {
+    const saved = process.env.SUPABASE_DEV_MODE;
+    delete process.env.SUPABASE_DEV_MODE;
+    try {
+      const url = await validateTargetUrl("http://localhost:3000/demo-target/account");
+      expect(url.pathname).toBe("/demo-target/account");
+    } finally {
+      if (saved !== undefined) process.env.SUPABASE_DEV_MODE = saved;
+    }
   });
 });

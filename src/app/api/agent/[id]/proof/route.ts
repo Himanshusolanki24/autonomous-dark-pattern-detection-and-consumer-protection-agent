@@ -28,7 +28,8 @@ export const GET = api(async (_req, ctx) => {
   const prefix = `proof_${id}_`;
   let latest: string | null = null;
   try {
-    const files = (await readdir(PROOFS_DIR))
+    // .proofs is runtime output, not source: tell Turbopack not to trace it into the build.
+    const files = (await readdir(/*turbopackIgnore: true*/ PROOFS_DIR))
       .filter((f) => f.startsWith(prefix) && f.endsWith(".png"))
       .sort();
     latest = files.at(-1) ?? null;
@@ -37,7 +38,7 @@ export const GET = api(async (_req, ctx) => {
   }
   if (!latest) throw new NotFoundError("No proof screenshot yet");
 
-  const png = await readFile(join(PROOFS_DIR, latest));
+  const png = await readFile(/*turbopackIgnore: true*/ join(/*turbopackIgnore: true*/ PROOFS_DIR, latest));
   return new NextResponse(new Uint8Array(png), {
     status: 200,
     headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=60" },

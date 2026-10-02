@@ -26,8 +26,9 @@ function baseState(): AgentState {
 }
 
 describe("routeAfterPlan", () => {
-  it("routes to completion when the goal is reached", () => {
-    expect(routeAfterPlan({ ...baseState(), status: "completed" })).toBe(GRAPH.COMPLETE);
+  it("routes to verification when the goal is reached", () => {
+    // A reached goal is checked on the page (and proof saved) before the run completes.
+    expect(routeAfterPlan({ ...baseState(), status: "completed" })).toBe(GRAPH.VERIFY);
   });
 
   it("routes to failure when failed", () => {
@@ -74,8 +75,8 @@ describe("routeAfterAct", () => {
   it("loops to perceive after a normal action", () => {
     expect(routeAfterAct(baseState())).toBe(GRAPH.PERCEIVE);
   });
-  it("routes to complete/fail on terminal states", () => {
-    expect(routeAfterAct({ ...baseState(), status: "completed" })).toBe(GRAPH.COMPLETE);
+  it("routes to verify/fail on terminal states", () => {
+    expect(routeAfterAct({ ...baseState(), status: "completed" })).toBe(GRAPH.VERIFY);
     expect(routeAfterAct({ ...baseState(), status: "failed" })).toBe(GRAPH.FAIL);
   });
 });
