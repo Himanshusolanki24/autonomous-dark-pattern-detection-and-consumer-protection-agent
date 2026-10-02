@@ -177,13 +177,13 @@ export default function SettingsPage() {
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <div className="max-w-3xl space-y-5">
 
       {/* ── Header ───────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-zinc-500" aria-hidden="true" />
-          <h2 className="text-lg font-semibold text-zinc-900">Settings</h2>
+          <h2 className="text-[28px] font-bold leading-tight text-zinc-900">Settings</h2>
         </div>
         <p className="mt-0.5 text-[12px] text-zinc-400">
           Configure how the agent behaves on your behalf.

@@ -14,7 +14,7 @@ import {
 import type { ActivityRecord, AgentId } from "@/lib/types";
 import { fetchActivity } from "@/lib/services/taskService";
 import { AGENT_SHORT } from "@/lib/constants";
-import { agentTone, cn, formatTimestamp, formatTime } from "@/lib/utils";
+import { agentTone, cn, formatTime } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ function EventRow({ record, isLast }: { record: ActivityRecord; isLast: boolean 
           {/* Left: agent + event */}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={cn("text-[10px] font-bold uppercase tracking-widest", tone.color)}>
+              <span className={cn("text-[12px] font-medium ", tone.color)}>
                 {AGENT_SHORT[record.agent]}
               </span>
               <span className="text-[10px] text-zinc-300" aria-hidden="true">·</span>
@@ -148,7 +148,7 @@ function DateGroup({ label, items }: { label: string; items: ActivityRecord[] })
   return (
     <div>
       <div className="mb-3 flex items-center gap-3">
-        <p className="shrink-0 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+        <p className="shrink-0 text-[12px] font-medium text-zinc-400">
           {label}
         </p>
         <span className="h-px flex-1 bg-zinc-100" aria-hidden="true" />
@@ -198,15 +198,15 @@ export default function ActivityPage() {
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <div className="max-w-4xl space-y-5">
 
       {/* ── Header ───────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+          <p className="text-[12px] font-medium text-zinc-400">
             Audit Log
           </p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-zinc-900">
+          <h2 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-zinc-900">
             Activity
           </h2>
           <p className="mt-0.5 text-[12px] text-zinc-400">
@@ -248,7 +248,7 @@ export default function ActivityPage() {
             <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-4">
               {/* Search */}
               <div>
-                <label htmlFor="activity-search" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+                <label htmlFor="activity-search" className="mb-1.5 block text-[12px] font-medium text-zinc-400">
                   Search
                 </label>
                 <div className="relative">
@@ -267,7 +267,7 @@ export default function ActivityPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Agent filter */}
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+                  <p className="mb-2 text-[12px] font-medium text-zinc-400">
                     Agent
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -294,7 +294,7 @@ export default function ActivityPage() {
 
                 {/* Status filter */}
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+                  <p className="mb-2 text-[12px] font-medium text-zinc-400">
                     Status
                   </p>
                   <div className="flex flex-wrap gap-1.5">

@@ -161,13 +161,13 @@ function FlowNode({
 
 export default function SecurityPage() {
   return (
-    <div className="mx-auto max-w-4xl space-y-10 p-4 sm:p-6 lg:p-8">
+    <div className="max-w-4xl space-y-10">
 
       {/* ── Page header ──────────────────────────── */}
       <div>
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-          <h2 className="text-lg font-semibold text-zinc-900">
+          <h2 className="text-[28px] font-bold leading-tight text-zinc-900">
             Security &amp; Privacy
           </h2>
         </div>
@@ -263,7 +263,7 @@ export default function SecurityPage() {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+            <p className="mb-2 text-[12px] font-medium text-emerald-600">
               Agent CAN
             </p>
             {[
@@ -278,7 +278,7 @@ export default function SecurityPage() {
             ))}
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-red-500">
+            <p className="mb-2 text-[12px] font-medium text-red-500">
               Agent CANNOT
             </p>
             {[

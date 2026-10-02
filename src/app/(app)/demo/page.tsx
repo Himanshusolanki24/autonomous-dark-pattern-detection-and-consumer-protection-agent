@@ -74,10 +74,10 @@ export default function DemoPage() {
   const idle = store.status === "idle" && !finished;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="max-w-7xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          <h2 className="flex items-center gap-2 text-[28px] font-bold leading-tight tracking-tight">
             <FlaskConical className="h-5 w-5 text-amber-600" />
             Live Demo
           </h2>

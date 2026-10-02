@@ -17,8 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { CancellationTask, TaskStatus } from "@/lib/types";
-import { fetchTasks, summarizeTasks, stopTask } from "@/lib/services/taskService";
-import { CancellationCard } from "@/components/cancellation/CancellationCard";
+import { fetchTasks, summarizeTasks } from "@/lib/services/taskService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn, formatTimestamp } from "@/lib/utils";
@@ -237,7 +236,7 @@ export default function TasksPage() {
   // Loading
   if (!tasks) {
     return (
-      <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-5xl space-y-5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-9 w-32" />
@@ -252,15 +251,15 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <div className="max-w-5xl space-y-5">
 
       {/* ── Header ───────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+          <p className="text-[12px] font-medium text-zinc-400">
             TrapKiller
           </p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-zinc-900">
+          <h2 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-zinc-900">
             Cancellation Tasks
           </h2>
           <p className="mt-0.5 text-[12px] text-zinc-400">

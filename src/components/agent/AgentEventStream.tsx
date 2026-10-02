@@ -31,7 +31,7 @@ const EventRow = memo(function EventRow({ event, isFirst }: { event: AgentEvent;
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className={cn("text-[10px] font-bold uppercase tracking-widest", tone.color)}>
+          <span className={cn("text-[12px] font-medium ", tone.color)}>
             {AGENT_LABELS[event.agent]}
           </span>
           <span className="text-[10px] tabular-nums text-zinc-400">{formatTime(event.timestamp)}</span>
@@ -80,7 +80,7 @@ export function AgentEventStream({
       <div className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <Terminal className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">Event Stream</span>
+          <span className="text-[12px] font-medium text-zinc-400">Event Stream</span>
           {events.length > 0 && (
             <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-500">{events.length}</span>
           )}
