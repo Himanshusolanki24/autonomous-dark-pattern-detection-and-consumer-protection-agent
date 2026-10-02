@@ -64,7 +64,7 @@ export function MobileNav({
             <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
               {NAV_SECTIONS.map((section) => (
                 <div key={section.title}>
-                  <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  <p className="mb-1.5 px-2 text-[12px] font-medium text-zinc-400">
                     {section.title}
                   </p>
                   <ul className="space-y-0.5">

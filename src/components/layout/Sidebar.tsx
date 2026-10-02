@@ -2,272 +2,102 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Shield,
-  ChevronsLeft,
-  ChevronsRight,
-  Play,
-  LogOut,
-  ChevronRight,
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Play, Search, Shield } from "lucide-react";
 import { NAV_SECTIONS } from "@/lib/navigation";
 import { useAgentStore } from "@/stores/agent-store";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const STATUS_COLOR: Record<string, string> = {
-  idle: "bg-zinc-300",
-  running: "bg-emerald-500",
-  blocked: "bg-amber-500",
-  completed: "bg-emerald-500",
-  failed: "bg-red-500",
-};
+const STATUS = {
+  idle: { label: "Agent is idle", dot: "bg-white/30" },
+  running: { label: "Agent is working", dot: "bg-emerald-400 animate-dot-pulse" },
+  blocked: { label: "Waiting for your approval", dot: "bg-marker animate-dot-pulse" },
+  completed: { label: "Last case closed", dot: "bg-emerald-400" },
+  failed: { label: "Last case stopped", dot: "bg-red-400" },
+} as const;
 
-const STATUS_LABEL: Record<string, string> = {
-  idle: "Agent idle",
-  running: "Agent running",
-  blocked: "Approval required",
-  completed: "Session complete",
-  failed: "Session failed",
-};
-
-export function Sidebar({
-  collapsed,
-  onToggle,
-}: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
+export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const pathname = usePathname();
   const status = useAgentStore((s) => s.status);
-  const isRunning = status === "running";
-  const isBlocked = status === "blocked";
+  const s = STATUS[status] ?? STATUS.idle;
 
   return (
     <aside
-      className={cn(
-        "hidden h-full shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out md:flex",
-        collapsed ? "w-[60px]" : "w-[220px]"
-      )}
+      className="hidden w-[236px] shrink-0 flex-col bg-foreground text-white md:flex"
       aria-label="Primary navigation"
     >
-      {/* ── Brand header ─────────────────────────── */}
-      <div className={cn(
-        "flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-3",
-        collapsed && "justify-center px-0"
-      )}>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground shadow-sm">
-          <Shield className="h-4 w-4 text-white" strokeWidth={2} aria-hidden="true" />
+      <Link href="/" className="flex items-center gap-2.5 px-5 pb-5 pt-6 focus-visible:outline-none">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-marker text-foreground">
+          <Shield className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
         </span>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              className="min-w-0 overflow-hidden"
-            >
-              <p className="truncate text-[13px] font-semibold leading-tight tracking-tight">TrapKiller</p>
-              <p className="truncate text-[10px] leading-tight text-zinc-400">AI control center</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        <span className="font-display text-[18px] font-bold">TrapKiller</span>
+      </Link>
 
-      {/* ── Navigation ───────────────────────────── */}
-      <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.title}>
-            {!collapsed && (
-              <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                {section.title}
-              </p>
-            )}
-            <ul className="space-y-0.5" role="list">
-              {section.items.map((item) => {
-                const active =
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname.startsWith(item.href));
+      <button
+        type="button"
+        onClick={onSearch}
+        className="mx-3 mb-4 flex items-center gap-2 rounded-lg bg-white/[0.06] px-3 py-2 text-[13px] text-white/50 transition-colors hover:bg-white/10 hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marker"
+      >
+        <Search className="h-3.5 w-3.5" aria-hidden="true" />
+        Jump to…
+        <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 font-sans text-[10px]">⌘K</kbd>
+      </button>
 
-                const navItem = (
+      <nav className="flex-1 overflow-y-auto px-3">
+        {NAV_SECTIONS.map((section, i) => (
+          <ul
+            key={section.title}
+            role="list"
+            aria-label={section.title}
+            className={cn("space-y-0.5", i > 0 && "mt-3 border-t border-white/10 pt-3")}
+          >
+            {section.items.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={cn(
-                      "group relative flex items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                      collapsed && "justify-center",
-                      active
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-                    )}
                     aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marker",
+                      active ? "text-white" : "text-white/55 hover:text-white"
+                    )}
                   >
                     {active && (
+                      // One shared highlight that glides to whichever page is open.
                       <motion.span
-                        layoutId="sidebar-active-indicator"
-                        className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-foreground"
-                        transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                      />
+                        layoutId="nav-active"
+                        className="absolute inset-0 rounded-lg bg-white/[0.09]"
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      >
+                        <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-full bg-marker" />
+                      </motion.span>
                     )}
-                    <item.icon
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        active ? "text-zinc-700" : "text-zinc-400 group-hover:text-zinc-600"
-                      )}
-                      aria-hidden="true"
-                    />
-                    {!collapsed && (
-                      <span className="truncate">{item.label}</span>
-                    )}
-                    {/* Approval badge on tasks */}
-                    {!collapsed && item.href === "/tasks" && isBlocked && (
-                      <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
-                        !
-                      </span>
+                    <item.icon className={cn("relative h-4 w-4 shrink-0", active && "text-marker")} aria-hidden="true" />
+                    <span className="relative truncate">{item.label}</span>
+                    {item.href === "/agent" && status === "blocked" && (
+                      <span className="relative ml-auto h-2 w-2 rounded-full bg-marker" aria-label="Approval needed" />
                     )}
                   </Link>
-                );
-
-                return (
-                  <li key={item.href} role="listitem">
-                    {collapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{navItem}</TooltipTrigger>
-                        <TooltipContent side="right" className="text-xs">
-                          {item.label}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      navItem
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         ))}
       </nav>
 
-      {/* ── Demo link ────────────────────────────── */}
-      <div className={cn("border-t border-border px-2 py-2")}>
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                href="/demo"
-                className="flex h-9 w-full items-center justify-center rounded-lg text-amber-600 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                <Play className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Live Demo</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Link
-            href="/demo"
-            className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            <Play className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>Live Demo</span>
-            <ChevronRight className="ml-auto h-3 w-3 text-amber-400" aria-hidden="true" />
-          </Link>
-        )}
-      </div>
-
-      {/* ── Agent status + profile ────────────────── */}
-      <div className="space-y-1 border-t border-border p-2">
-        {/* Agent status pill */}
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex justify-center py-1.5">
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    STATUS_COLOR[status] ?? "bg-zinc-300",
-                    (isRunning || isBlocked) && "animate-dot-pulse"
-                  )}
-                  aria-hidden="true"
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">{STATUS_LABEL[status] ?? "Unknown"}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <div className={cn(
-            "flex items-center gap-2 rounded-lg border px-2.5 py-2",
-            status === "blocked"
-              ? "border-amber-200 bg-amber-50"
-              : status === "running"
-                ? "border-emerald-200 bg-emerald-50"
-                : "border-border bg-zinc-50"
-          )}>
-            <span
-              className={cn(
-                "h-1.5 w-1.5 shrink-0 rounded-full",
-                STATUS_COLOR[status] ?? "bg-zinc-300",
-                (isRunning || isBlocked) && "animate-dot-pulse"
-              )}
-              aria-hidden="true"
-            />
-            <span className={cn(
-              "text-[11px] font-medium",
-              status === "blocked" ? "text-amber-700"
-              : status === "running" ? "text-emerald-700"
-              : "text-zinc-500"
-            )}>
-              {STATUS_LABEL[status] ?? "Unknown"}
-            </span>
-          </div>
-        )}
-
-        {/* User profile */}
-        <div className={cn(
-          "flex items-center gap-2.5 rounded-lg px-1.5 py-1.5",
-          collapsed && "justify-center"
-        )}>
-          <Avatar className="h-7 w-7 shrink-0">
-            <AvatarFallback className="bg-zinc-200 text-[11px] font-semibold text-zinc-600">
-              TK
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-medium text-zinc-700">Demo User</p>
-              <p className="truncate text-[10px] text-zinc-400">dev mode</p>
-            </div>
-          )}
-          {!collapsed && (
-            <button
-              type="button"
-              className="ml-auto rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggle}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-lg border border-border px-2 py-1.5 text-[11px] text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            collapsed && "justify-center"
-          )}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      <div className="m-3 rounded-xl bg-white/[0.06] p-3.5" role="status">
+        <p className="flex items-center gap-2 text-[12.5px] text-white/80">
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", s.dot)} aria-hidden="true" />
+          {s.label}
+        </p>
+        <Link
+          href="/demo"
+          className="mt-2.5 inline-flex items-center gap-1.5 text-[12px] font-medium text-marker hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marker"
         >
-          {collapsed ? (
-            <ChevronsRight className="h-3.5 w-3.5" />
-          ) : (
-            <>
-              <ChevronsLeft className="h-3.5 w-3.5" />
-              <span>Collapse</span>
-            </>
-          )}
-        </button>
+          <Play className="h-3 w-3" aria-hidden="true" />
+          Watch a demo run
+        </Link>
       </div>
     </aside>
   );
