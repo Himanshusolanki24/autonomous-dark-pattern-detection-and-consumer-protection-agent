@@ -2,781 +2,382 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Play,
-  RotateCcw,
-  Square,
-  ShieldAlert,
-  Check,
-  CheckCircle2,
-  AlertTriangle,
-  Globe,
-  Clock,
-  Zap,
-  Bot,
-} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Loader2, Play, RotateCcw, Square } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
-import {
-  startPolling,
-  fetchSession,
-  stopSession,
-} from "@/lib/services/agentService";
+import { fetchSession, startPolling, stopSession } from "@/lib/services/agentService";
 import { startCancellation } from "@/lib/services/taskService";
-import { BACKEND_URL } from "@/lib/api";
-import { cn, nowIso, hostnameOf } from "@/lib/utils";
-import { AgentPipeline } from "@/components/agent/AgentPipeline";
-import { AgentEventStream } from "@/components/agent/AgentEventStream";
-import { AgentDecision } from "@/components/agent/AgentDecision";
-import { DetectionOverlay } from "@/components/scanner/DetectionOverlay";
+import { BACKEND_URL, demoTargetUrl } from "@/lib/api";
+import { AGENT_SHORT, PATTERN_LABELS, PIPELINE_ORDER } from "@/lib/constants";
+import { cn, formatTime, hostnameOf, nowIso } from "@/lib/utils";
+import type { AgentId, CancellationTask, StageState } from "@/lib/types";
 import { BrowserFrame } from "@/components/browser/BrowserFrame";
+import { AgentDecision } from "@/components/agent/AgentDecision";
 import { Button } from "@/components/ui/button";
-import { PATTERN_LABELS } from "@/lib/constants";
-import { severityTone } from "@/lib/utils";
-import { ConfidenceBar } from "@/components/ui/confidence-bar";
-import type { CancellationTask } from "@/lib/types";
+import { Marker, PageHeader, Stamp } from "@/components/ui/case";
 
-const STATUS_CONFIG: Record<string, { label: string; dot: string; pill: string }> = {
-  idle:      { label: "Idle — ready",        dot: "bg-zinc-300",                      pill: "border-zinc-200 bg-zinc-50 text-zinc-500" },
-  running:   { label: "Running",             dot: "bg-emerald-500 animate-dot-pulse", pill: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  blocked:   { label: "Awaiting Approval",   dot: "bg-amber-500 animate-dot-pulse",   pill: "border-amber-200 bg-amber-50 text-amber-700" },
-  completed: { label: "Session Complete",    dot: "bg-emerald-500",                   pill: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  failed:    { label: "Session Failed",      dot: "bg-red-500",                       pill: "border-red-200 bg-red-50 text-red-700" },
+const STAGE_VERB: Record<AgentId, string> = {
+  perception: "Look",
+  detection: "Spot traps",
+  planning: "Plan",
+  action: "Act",
+  verification: "Verify",
 };
 
-export default function AgentPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
-        </div>
-      }
-    >
-      <AgentPageContent />
-    </Suspense>
-  );
-}
+const EVENT_DOT: Record<string, string> = {
+  running: "bg-brand",
+  success: "bg-emerald-500",
+  warning: "bg-amber-500",
+  error: "bg-red-500",
+};
 
-/** Cancellation proof screenshot captured by the verification stage. */
-function ProofShot({ sessionId }: { sessionId: string }) {
-  const [ok, setOk] = useState(true);
-  if (!ok) return null;
-  const src = `${BACKEND_URL}/api/agent/${sessionId}/proof`;
+/** Horizontal case track. The bar fills as stages finish; the current stage is marked. */
+function CaseTrack({ stages, blocked }: { stages: Record<AgentId, StageState>; blocked: boolean }) {
+  const done = PIPELINE_ORDER.filter((a) => stages[a] === "completed").length;
+  const active = PIPELINE_ORDER.some((a) => stages[a] === "running" || stages[a] === "blocked");
+  const progress = Math.min(1, (done + (active ? 0.5 : 0)) / PIPELINE_ORDER.length);
+
   return (
-    <div className="mt-2 overflow-hidden rounded-lg border border-zinc-200">
-      <p className="border-b border-zinc-100 bg-zinc-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
-        Cancellation Screenshot
-      </p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt="Cancellation confirmation screenshot"
-        className="w-full"
-        onError={() => setOk(false)}
-      />
+    <div>
+      <div className="relative h-2 overflow-hidden rounded-full bg-zinc-200">
+        <motion.div
+          className={cn("absolute inset-y-0 left-0 w-full origin-left rounded-full", blocked ? "bg-amber-500" : "bg-foreground")}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: progress }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+        />
+      </div>
+      <ol className="mt-3 grid grid-cols-5 gap-2">
+        {PIPELINE_ORDER.map((a) => {
+          const st = stages[a];
+          return (
+            <li key={a} className="text-[13px]">
+              <span
+                className={cn(
+                  "flex items-center gap-1.5 font-medium",
+                  st === "completed" && "text-foreground",
+                  st === "running" && "text-brand",
+                  st === "blocked" && "text-amber-700",
+                  st === "failed" && "text-red-600",
+                  st === "idle" && "text-zinc-400"
+                )}
+              >
+                {st === "completed" && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                {st === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {STAGE_VERB[a]}
+              </span>
+              {st === "blocked" && <span className="text-[12px] text-amber-700">waiting for you</span>}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
 
-function AgentPageContent() {
+/** The built-in test site runs on this app's own host; call it by its name. */
+function serviceName(domain: string): string {
+  return domain === "localhost" || domain === "127.0.0.1" ? "StreamVault" : domain;
+}
+
+/** Proof screenshot captured by the verification stage. */
+function ProofShot({ sessionId }: { sessionId: string }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`${BACKEND_URL}/api/agent/${sessionId}/proof`}
+      alt="Screenshot of the cancellation confirmation"
+      className="mt-5 max-h-[340px] w-full max-w-xl rounded-xl border border-border object-cover object-top"
+      onError={() => setOk(false)}
+    />
+  );
+}
+
+function AgentConsole() {
   const store = useAgentStore();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
-  const [eventCollapsed, setEventCollapsed] = useState(false);
-  const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [targetUrlInput, setTargetUrlInput] = useState<string>(
-    searchParams.get("url") || searchParams.get("targetUrl") || "http://localhost:3001/demo-target/account"
+  const params = useSearchParams();
+  // Resuming ?session=… starts in the loading state rather than flipping it inside the mount effect.
+  const [starting, setStarting] = useState(
+    () => !!(params.get("session") || params.get("url") || params.get("targetUrl")) && useAgentStore.getState().status === "idle"
   );
+  const [error, setError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState(() => params.get("url") || params.get("targetUrl") || demoTargetUrl());
   const pollRef = useRef<{ cancel: () => void } | null>(null);
 
-  const pattern = store.patterns.find((p) => p.id === selectedPatternId) ?? null;
   const isIdle = store.status === "idle";
   const isBlocked = store.status === "blocked";
-  const isCompleted = store.status === "completed";
+  const isDone = store.status === "completed";
   const isFailed = store.status === "failed";
-  const isActive = store.status === "running" || isBlocked;
-  const statusCfg = STATUS_CONFIG[store.status] ?? STATUS_CONFIG.idle;
 
-  const startAgent = useCallback(async (customUrl?: string) => {
-    const urlToRun = (customUrl ?? targetUrlInput).trim() || "http://localhost:3001/demo-target/account";
-    setStartError(null);
-    setStarting(true);
-    const goal = urlToRun.includes("demo-target") || urlToRun.includes("cancel")
-      ? "cancel_subscription"
-      : "detect_dark_patterns";
-    try {
-      const res = await startCancellation({
-        goal,
-        targetUrl: urlToRun,
-      });
-      const domain = hostnameOf(urlToRun);
-      const task: CancellationTask = {
-        id: res.sessionId,
-        service: domain === "localhost" ? "Demo Target" : domain,
-        plan: "Investigation",
-        price: "—",
-        domain: domain,
-        status: "running",
-        createdAt: nowIso(),
-        patternCount: 0,
-      };
-      store.startSession(task);
-      store.setLive(true);
-      router.replace(`/agent?session=${res.sessionId}`);
+  const follow = useCallback(
+    (sessionId: string) => {
       pollRef.current?.cancel();
-      pollRef.current = startPolling(res.sessionId, () => { pollRef.current = null; });
-    } catch (err) {
-      setStartError(
-        "Could not start the agent. Ensure the backend is running on port 3001."
-      );
-    } finally {
-      setStarting(false);
-    }
-  }, [targetUrlInput, store, router]);
+      pollRef.current = startPolling(sessionId, () => {
+        pollRef.current = null;
+      });
+    },
+    []
+  );
 
-  // Load session from URL param on mount, or auto-start if url param passed
+  /** Starts a run. Only touches React state after the network call, so it is safe to call from an effect. */
+  const launch = useCallback(
+    async (url: string) => {
+      // Cancellation flows get the full agent; anything else is a look-only investigation.
+      const goal = url.includes("demo-target") || url.includes("cancel") ? "cancel_subscription" : "detect_dark_patterns";
+      try {
+        const res = await startCancellation({ goal, targetUrl: url });
+        const domain = hostnameOf(url);
+        const task: CancellationTask = {
+          id: res.sessionId,
+          service: serviceName(domain),
+          plan: goal === "cancel_subscription" ? "Cancellation" : "Investigation",
+          price: "—",
+          domain,
+          status: "running",
+          createdAt: nowIso(),
+          patternCount: 0,
+        };
+        store.startSession(task);
+        store.setLive(true);
+        router.replace(`/agent?session=${res.sessionId}`);
+        follow(res.sessionId);
+      } catch {
+        setError("The agent couldn’t start. Make sure the app server is running (npm run dev) and try again.");
+      } finally {
+        setStarting(false);
+      }
+    },
+    [store, router, follow]
+  );
+
+  const startAgent = (customUrl?: string) => {
+    setError(null);
+    setStarting(true);
+    void launch((customUrl ?? urlInput).trim() || demoTargetUrl());
+  };
+
+  // Resume a session from ?session=…, or auto-start from ?url=… (scanner hand-off).
   useEffect(() => {
-    const sessionId = searchParams.get("session");
-    const passedUrl = searchParams.get("url") || searchParams.get("targetUrl");
-
+    const sessionId = params.get("session");
+    const passedUrl = params.get("url") || params.get("targetUrl");
     if (sessionId && isIdle) {
-      setStarting(true);
       fetchSession(sessionId)
         .then((session) => {
-          const task: CancellationTask = {
+          const domain = hostnameOf(session.targetUrl ?? "");
+          store.startSession({
             id: sessionId,
-            service: hostnameOf(session.targetUrl ?? ""),
+            service: serviceName(domain),
             plan: session.goal ?? "Investigation",
             price: "—",
-            domain: hostnameOf(session.targetUrl ?? ""),
+            domain,
             status: "running",
             createdAt: session.startedAt ?? nowIso(),
             patternCount: 0,
-          };
-          store.startSession(task);
+          });
           store.setLive(true);
-          pollRef.current?.cancel();
-          pollRef.current = startPolling(sessionId, () => { pollRef.current = null; });
+          follow(sessionId);
         })
-        .catch(() => setStartError("Could not load session. The backend may be unavailable."))
+        .catch(() => setError("That case couldn’t be loaded. It may have expired; start a new one."))
         .finally(() => setStarting(false));
-    } else if (passedUrl && isIdle && !sessionId) {
-      void startAgent(passedUrl);
+    } else if (passedUrl && isIdle) {
+      // launch() only sets state after awaiting the API call; the rule can't see past the await.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void launch(passedUrl);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const stopAgent = useCallback(async () => {
-    if (store.task?.id && store.live) {
-      try { await stopSession(store.task.id); } catch { /* ignore */ }
+  const reset = useCallback(async () => {
+    if (store.task?.id && store.live && !isDone && !isFailed) {
+      try {
+        await stopSession(store.task.id);
+      } catch {
+        /* the session may already be gone */
+      }
     }
     pollRef.current?.cancel();
     pollRef.current = null;
     store.resetSession();
-    if (typeof window !== "undefined") {
-      window.history.replaceState({}, "", "/agent");
-    }
     router.replace("/agent");
-  }, [store, router]);
+  }, [store, router, isDone, isFailed]);
 
-  useEffect(() => () => { pollRef.current?.cancel(); }, []);
+  useEffect(() => () => pollRef.current?.cancel(), []);
 
-  // Format confidence as percentage
-  const fmtConfidence = (c: number) =>
-    c <= 1 ? `${Math.round(c * 100)}%` : `${Math.round(c)}%`;
+  const log = [...store.events].reverse();
+
+  if (isIdle) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Send the agent in"
+          lede="Give it a cancellation page. It reads each screen, steps around the traps, and asks you before anything that can’t be undone."
+        />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            startAgent();
+          }}
+          className="max-w-2xl rounded-2xl border border-border bg-surface p-6"
+        >
+          <label htmlFor="agent-url" className="text-[14px] font-semibold">
+            Where should it start?
+          </label>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              id="agent-url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              className="h-12 flex-1 rounded-xl border border-border-strong bg-background px-4 font-mono text-[13.5px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15"
+            />
+            <Button type="submit" size="lg" disabled={starting} className="h-12 rounded-xl px-6">
+              {starting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
+              {starting ? "Starting…" : "Start the agent"}
+            </Button>
+          </div>
+          <p className="mt-3 text-[13px] text-zinc-500">
+            Pre-filled with the StreamVault test site, which has real retention traps to get past.
+          </p>
+          {error && (
+            <p role="alert" className="mt-3 text-[13.5px] text-red-600">
+              {error}
+            </p>
+          )}
+        </form>
+        <ol className="grid max-w-3xl gap-6 sm:grid-cols-3">
+          {[
+            ["It looks", "Reads every button and line of text on the page, like you would."],
+            ["It steps around traps", "Ignores “Keep my benefits” and “pause instead” offers."],
+            ["You decide", "The final irreversible click waits for your approval."],
+          ].map(([t, d], i) => (
+            <li key={t}>
+              <p className="font-display text-[15px] font-bold">
+                <span className="mr-2 text-zinc-400">{i + 1}</span>
+                {t}
+              </p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-500">{d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-
-      {/* ── Page header ───────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              {store.task ? "Active Investigation" : "AI Investigation Center"}
-            </span>
-            {store.task && (
-              <>
-                <span className="h-px w-4 bg-zinc-200" aria-hidden="true" />
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
-                  <Globe className="h-3 w-3" aria-hidden="true" />
-                  {store.task.domain}
-                </span>
-              </>
-            )}
-          </div>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-zinc-900">
-            {store.task
-              ? `Investigating ${store.task.domain}`
-              : "Agent Control Center"}
-          </h2>
-          <p className="mt-0.5 text-[12px] text-zinc-400">
-            {store.task
-              ? `Session ${store.task.id.slice(0, 8).toUpperCase()} · ${store.task.plan}`
-              : "Perceive → Detect → Plan → Human Approval → Act → Verify"}
-          </p>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Single authoritative status pill */}
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold",
-              statusCfg.pill
-            )}
-            role="status"
-          >
-            <span
-              className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusCfg.dot)}
-              aria-hidden="true"
-            />
-            {statusCfg.label}
-          </span>
-
-          {isIdle ? (
-            <Button
-              onClick={() => void startAgent()}
-              disabled={starting || !targetUrlInput.trim()}
-              size="sm"
-            >
-              {starting ? (
-                <>
-                  <span
-                    className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                    aria-hidden="true"
-                  />
-                  Starting…
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                  Start Agent
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => void stopAgent()}
-              size="sm"
-            >
-              <Square className="h-3.5 w-3.5" aria-hidden="true" />
-              Stop
-            </Button>
-          )}
-
-          {(isCompleted || isFailed) && (
-            <Button
-              variant="ghost"
-              onClick={() => void stopAgent()}
-              size="sm"
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Reset
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Target URL Input & Quick Presets (when idle) ────────────────── */}
-      {isIdle && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <label htmlFor="target-url-input" className="text-xs font-semibold text-zinc-700 flex items-center gap-1.5">
-              <Globe className="h-3.5 w-3.5 text-blue-600" />
-              Enter Target URL to Run Autonomous Agent
-            </label>
-            <span className="text-[10px] text-zinc-400">Agent runs live in backend pipeline</span>
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void startAgent();
-            }}
-            className="flex items-center gap-2"
-          >
-            <div className="relative flex-1">
-              <input
-                id="target-url-input"
-                type="url"
-                value={targetUrlInput}
-                onChange={(e) => setTargetUrlInput(e.target.value)}
-                placeholder="https://example.com/account/subscription"
-                className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3.5 py-2 text-xs font-mono text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={starting || !targetUrlInput.trim()}
-              size="sm"
-              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-            >
-              {starting ? "Launching..." : "Launch Agent Pipeline"}
-            </Button>
-          </form>
-
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Quick Presets:</span>
-            {[
-              { name: "AcmeCloud Demo Target", url: "http://localhost:3001/demo-target/account" },
-              { name: "Coursera", url: "https://www.coursera.org" },
-              { name: "Udemy", url: "https://www.udemy.com" },
-            ].map((preset) => (
-              <button
-                key={preset.url}
-                type="button"
-                onClick={() => {
-                  setTargetUrlInput(preset.url);
-                  void startAgent(preset.url);
-                }}
-                className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Error banner ────────────────────────── */}
-      {startError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <p className="text-sm font-medium text-red-700">{startError}</p>
-          <p className="mt-0.5 text-[12px] text-red-600/80">
-            Start the backend:{" "}
-            <code className="rounded bg-red-100 px-1 text-[11px]">
-              cd backend &amp;&amp; npm run dev
-            </code>
-          </p>
-        </div>
-      )}
-
-      {/* ── Approval banner ─────────────────────── */}
-      <AnimatePresence>
-        {isBlocked && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3"
-            role="alert"
-          >
-            <ShieldAlert
-              className="h-5 w-5 shrink-0 text-amber-600 animate-dot-pulse"
-              aria-hidden="true"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-800">
-                Human approval required
-              </p>
-              <p className="text-[12px] text-amber-700">
-                The agent has paused before an irreversible action. Review and
-                approve in the dialog.
-              </p>
-            </div>
-          </motion.div>
+    <div className="space-y-8">
+      <PageHeader
+        title={store.task?.service ?? "Live case"}
+        lede={
+          isDone
+            ? "Case closed. The outcome was checked on the page and a screenshot was saved."
+            : isFailed
+              ? "The agent stopped before finishing. The case log shows the last step it took."
+              : isBlocked
+                ? "The agent reached the final, irreversible step and is waiting for your approval."
+                : "The agent is working through the page. Every step lands in the case log."
+        }
+      >
+        {isDone || isFailed ? (
+          <Button variant="outline" onClick={() => void reset()}>
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> New case
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => void reset()}>
+            <Square className="h-4 w-4" aria-hidden="true" /> Stop agent
+          </Button>
         )}
-      </AnimatePresence>
+      </PageHeader>
 
-      {/* ── Completion banner ────────────────────── */}
+      <CaseTrack stages={store.stageStates} blocked={isBlocked} />
+
       <AnimatePresence>
-        {isCompleted && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
+        {isDone && (
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4"
-            role="status"
+            className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6"
           >
-            <Check
-              className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600"
-              aria-hidden="true"
-            />
-            <div>
-              <p className="text-sm font-semibold text-emerald-800">
-                Session complete
-              </p>
-              {store.verification ? (
-                <div className="mt-2 space-y-1.5">
-                  {[
-                    "Expected page state detected",
-                    "Confirmation message detected",
-                    "Outcome verified",
-                  ].map((item) => (
-                    <p
-                      key={item}
-                      className="flex items-center gap-2 text-[12px] text-emerald-700"
-                    >
-                      <CheckCircle2
-                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
-                        aria-hidden="true"
-                      />
-                      {item}
-                    </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-display text-[24px] font-bold">Cancellation confirmed</p>
+                <ul className="mt-3 space-y-1.5 text-[14px] text-emerald-900">
+                  {["Reached the confirmation page", "Found the cancellation message", "Saved a screenshot as proof"].map((t) => (
+                    <li key={t} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" /> {t}
+                    </li>
                   ))}
-                  {store.verification.proofId && (
-                    <p className="mt-1 text-[11px] text-emerald-600/70">
-                      Proof ID:{" "}
-                      <span className="font-mono">{store.verification.proofId}</span>
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-0.5 text-[12px] text-emerald-700">
-                  Outcome verified.
-                </p>
-              )}
+                </ul>
+                {store.verification?.proofId && (
+                  <p className="mt-3 font-mono text-[12px] text-emerald-800/70">proof {store.verification.proofId}</p>
+                )}
+              </div>
+              <Stamp>Verified</Stamp>
             </div>
-          </motion.div>
+            {store.task?.id && store.live && <ProofShot sessionId={store.task.id} />}
+          </motion.section>
         )}
       </AnimatePresence>
 
-      {/* ── Pipeline ─────────────────────────────── */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              Agent Pipeline
-            </p>
-            <h3 className="mt-0.5 text-sm font-semibold text-zinc-900">
-              {isIdle
-                ? "Pipeline idle"
-                : isCompleted
-                ? "Pipeline complete"
-                : "Pipeline active"}
-            </h3>
-          </div>
-          <span className="hidden text-[10px] text-zinc-300 sm:block" aria-hidden="true">
-            PERCEIVE → DETECT → PLAN → APPROVE → ACT → VERIFY
-          </span>
-        </div>
-        <AgentPipeline />
-      </div>
-
-      {/* ── Two-column workspace ─────────────────── */}
-      <div className="grid gap-5 xl:grid-cols-2">
-
-        {/* LEFT: Browser preview */}
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-zinc-100 px-4 py-3 flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                Live Page View
-              </p>
-              <p className="mt-0.5 text-[12px] text-zinc-600 font-medium truncate max-w-xs">
-                {store.browser?.url
-                  ? store.browser.url
-                  : isIdle
-                  ? "No active session"
-                  : "Connecting to browser…"}
-              </p>
-            </div>
-            {isActive && (
-              <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600">
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-dot-pulse"
-                  aria-hidden="true"
-                />
-                Live
-              </span>
-            )}
-          </div>
-          <div className="relative min-h-[300px]">
-            <DetectionOverlay
-              pattern={pattern}
-              onClose={() => setSelectedPatternId(null)}
-            />
-            <BrowserFrame
-              browser={store.browser}
-              onElementClick={(t) => {
-                const hit = store.patterns.find((p) => p.type === t);
-                if (hit) setSelectedPatternId(hit.id);
-              }}
-            />
-          </div>
-        </div>
-
-        {/* RIGHT: Events + decision + patterns */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
-
-          {/* Metrics row — only when active */}
-          {!isIdle && (
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                {
-                  icon: Zap,
-                  label: "Events",
-                  value: store.events.length,
-                  tone: "text-brand bg-brand-soft",
-                },
-                {
-                  icon: AlertTriangle,
-                  label: "Patterns",
-                  value: store.patterns.length,
-                  tone: "text-amber-600 bg-amber-50",
-                },
-                {
-                  icon: Bot,
-                  label: "Stage",
-                  value: (() => {
-                    const active = (
-                      ["perception", "detection", "planning", "action", "verification"] as const
-                    ).find(
-                      (s) =>
-                        store.stageStates[s] === "running" ||
-                        store.stageStates[s] === "blocked"
-                    );
-                    return active
-                      ? active.slice(0, 4).toUpperCase()
-                      : isCompleted
-                      ? "DONE"
-                      : "—";
-                  })(),
-                  tone: "text-zinc-600 bg-zinc-100",
-                },
-              ].map(({ icon: Icon, label, value, tone }) => (
-                <div
-                  key={label}
-                  className="rounded-lg border border-zinc-100 bg-white p-3 shadow-sm"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-md",
-                        tone
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                    </span>
-                    <span className="text-[10px] font-medium text-zinc-400">
-                      {label}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-lg font-semibold tabular-nums text-zinc-900">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Event stream */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <AgentEventStream
-              events={store.events}
-              maxHeight="h-[240px]"
-              collapsed={eventCollapsed}
-              onCollapse={() => setEventCollapsed((v) => !v)}
-            />
-          </div>
-
-          {/* Agent decision */}
-          {store.decision && <AgentDecision decision={store.decision} />}
-
-          {/* Detected patterns */}
+          <BrowserFrame browser={store.browser} />
           {store.patterns.length > 0 && (
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  Detected Patterns
-                </p>
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-500">
-                  {store.patterns.length}
-                </span>
-              </div>
-              <p className="mb-3 text-[11px] text-zinc-400">
-                Automated estimate — not legal advice.
-              </p>
-              <div className="space-y-3">
-                {store.patterns.map((p) => {
-                  const tone = severityTone(p.severity);
-                  const isSelected = selectedPatternId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedPatternId(isSelected ? null : p.id)
-                      }
-                      className={cn(
-                        "w-full rounded-lg border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                        isSelected
-                          ? "border-zinc-300 bg-zinc-50 shadow-sm"
-                          : "border-zinc-100 bg-zinc-50 hover:border-zinc-200"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-zinc-800">
-                          {PATTERN_LABELS[p.type] ?? p.type}
-                        </p>
-                        <span
-                          className={cn(
-                            "rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase",
-                            tone.badge
-                          )}
-                        >
-                          {p.severity}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-[11px] text-zinc-500">
-                        {p.element}
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <ConfidenceBar
-                          confidence={p.confidence}
-                          className="flex-1"
-                        />
-                        <span className="shrink-0 text-[10px] tabular-nums text-zinc-400">
-                          {fmtConfidence(p.confidence)}
-                        </span>
-                      </div>
-                      {isSelected && (
-                        <p className="mt-2 text-[11px] leading-5 text-zinc-600">
-                          {p.explanation}
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Idle empty state */}
-          {isIdle && store.patterns.length === 0 && (
-            <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-8 text-center">
-              <span
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-zinc-200 shadow-sm"
-                aria-hidden="true"
-              >
-                <Bot className="h-6 w-6 text-zinc-300" />
-              </span>
-              <p className="mt-4 text-sm font-semibold text-zinc-700">
-                No active investigation
-              </p>
-              <p className="mt-1.5 text-[12px] leading-5 text-zinc-400">
-                Start the agent to begin a live investigation. The pipeline will
-                activate and stream events in real time as each stage runs.
-              </p>
-              <Button
-                onClick={() => void startAgent()}
-                disabled={starting}
-                size="sm"
-                className="mt-4"
-              >
-                {starting ? (
-                  <>
-                    <span
-                      className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                      aria-hidden="true"
-                    />
-                    Starting…
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    Start Agent
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Session failed state */}
-          {isFailed && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle
-                    className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-red-800">
-                      Session failed
-                    </p>
-                    <p className="mt-0.5 text-[12px] text-red-700">
-                      The previous session encountered an error or was aborted. Click Reset to start a clean new investigation.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void stopAgent()}
-                  className="shrink-0 border-red-300 bg-white text-red-700 hover:bg-red-100 hover:text-red-800"
-                >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                  Reset
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Verification details when complete */}
-          {isCompleted && store.verification && (
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                Verification Result
-              </p>
-              <div className="space-y-2">
-                {[
-                  { label: "Service", value: store.verification.service },
-                  { label: "Plan", value: store.verification.plan },
-                  { label: "Status", value: store.verification.status },
-                  { label: "Method", value: store.verification.method },
-                ].map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between gap-2 text-[12px]"
-                  >
-                    <span className="text-zinc-400">{label}</span>
-                    <span className="font-medium text-zinc-700">{value}</span>
-                  </div>
+            <div>
+              <h2 className="text-[15px] font-semibold">Traps it caught on the way</h2>
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                {store.patterns.map((p, i) => (
+                  <li key={p.id} className="text-[14px]">
+                    <Marker delay={0.2 + i * 0.12}>{PATTERN_LABELS[p.type] ?? p.type}</Marker>
+                  </li>
                 ))}
-                {store.verification.proofId && (
-                  <div className="mt-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
-                    <p className="text-[10px] text-zinc-400">Proof ID</p>
-                    <p className="mt-0.5 font-mono text-[11px] text-zinc-700">
-                      {store.verification.proofId}
-                    </p>
-                  </div>
-                )}
-                {store.task && <ProofShot sessionId={store.task.id} />}
-              </div>
-            </div>
-          )}
-
-          {/* Session metadata */}
-          {store.task && (
-            <div className="flex items-center gap-4 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-2.5 text-[11px] text-zinc-400">
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3" aria-hidden="true" />
-                Started{" "}
-                {new Date(store.task.createdAt).toLocaleTimeString("en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Globe className="h-3 w-3" aria-hidden="true" />
-                {store.task.domain}
-              </span>
-              <span className="ml-auto font-mono">
-                {store.task.id.slice(0, 8).toUpperCase()}
-              </span>
+              </ul>
             </div>
           )}
         </div>
+
+        <aside aria-label="Case log">
+          <h2 className="flex items-baseline justify-between text-[15px] font-semibold">
+            Case log
+            <span className="text-[12px] font-normal text-zinc-500">{store.events.length} entries</span>
+          </h2>
+          {store.decision && (
+            <div className="mt-3">
+              <AgentDecision decision={store.decision} />
+            </div>
+          )}
+          <ol className="mt-3 max-h-[560px] space-y-0 overflow-y-auto pr-1">
+            <AnimatePresence initial={false}>
+              {log.map((e) => (
+                // New entries spring in at the top; older ones slide down to make room.
+                <motion.li
+                  key={e.id}
+                  layout
+                  initial={{ opacity: 0, y: -14, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  className="relative border-l border-border py-2.5 pl-5"
+                >
+                  <span className={cn("absolute -left-[5px] top-4 h-2.5 w-2.5 rounded-full ring-4 ring-background", EVENT_DOT[e.status])} aria-hidden="true" />
+                  <p className="text-[12px] text-zinc-400">
+                    <span className="font-medium text-zinc-600">{AGENT_SHORT[e.agent]}</span> · {formatTime(e.timestamp)}
+                  </p>
+                  <p className="mt-0.5 text-[13.5px] leading-snug">{e.message}</p>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ol>
+        </aside>
       </div>
     </div>
+  );
+}
+
+export default function AgentPage() {
+  return (
+    <Suspense>
+      <AgentConsole />
+    </Suspense>
   );
 }

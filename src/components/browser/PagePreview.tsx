@@ -12,7 +12,7 @@ import { DarkPatternHighlight } from "./DarkPatternHighlight";
  * Playwright browser so sites that block iframe embedding (X-Frame-Options)
  * still render, unlike a client-side <iframe>.
  */
-function LiveShot({ url, isScanning }: { url: string; isScanning?: boolean }) {
+export function LiveShot({ url, isScanning }: { url: string; isScanning?: boolean }) {
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const src = `${BACKEND_URL}/api/scanner/screenshot?url=${encodeURIComponent(url)}`;
 
@@ -45,7 +45,7 @@ function LiveShot({ url, isScanning }: { url: string; isScanning?: boolean }) {
           initial={{ top: "0%" }}
           animate={{ top: "100%" }}
           transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none absolute left-0 z-50 h-[2px] w-full bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.6)]"
+          className="pointer-events-none absolute left-0 z-50 h-[3px] w-full bg-marker shadow-[0_0_14px_4px_rgba(255,225,90,0.7)]"
         />
       )}
       <p className="border-t border-zinc-100 px-3 py-1.5 text-[10px] text-zinc-400">
@@ -297,7 +297,7 @@ export function PagePreview({
               initial={{ top: "0%" }}
               animate={{ top: "100%" }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-              className="pointer-events-none absolute left-0 z-50 h-[2px] w-full bg-blue-500 shadow-[0_0_12px_3px_rgba(59,130,246,0.6)]" 
+              className="pointer-events-none absolute left-0 z-50 h-[3px] w-full bg-marker shadow-[0_0_14px_4px_rgba(255,225,90,0.7)]" 
             />
           )}
         </Shell>

@@ -7,7 +7,6 @@ import { useAgentStore } from "@/stores/agent-store";
 import { demoSimulator } from "@/lib/services/simulator";
 import { approveSession, stopSession } from "@/lib/services/agentService";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export function ApprovalModal() {
   const approvalRequired = useAgentStore((s) => s.approvalRequired);
@@ -63,11 +62,12 @@ export function ApprovalModal() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [approvalRequired]);
 
-  if (!approvalRequired) return null;
-
+  // The condition lives inside AnimatePresence so the exit animation can actually play.
   return (
     <AnimatePresence>
+      {approvalRequired && (
       <motion.div
+        key="approval"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -79,22 +79,22 @@ export function ApprovalModal() {
         aria-describedby="approval-desc"
       >
         <motion.div
-          initial={{ scale: 0.95, y: 16, opacity: 0 }}
+          initial={{ scale: 0.92, y: 24, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
-          exit={{ scale: 0.95, y: 16, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          exit={{ scale: 0.97, y: 8, opacity: 0, transition: { duration: 0.15 } }}
+          transition={{ type: "spring", stiffness: 300, damping: 24 }}
           className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-start gap-4 border-b border-zinc-100 bg-zinc-50 px-6 py-5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground shadow-sm">
-              <UserCheck className="h-5 w-5 text-white" aria-hidden="true" />
+              <UserCheck className="h-5 w-5 text-marker" aria-hidden="true" />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                Human Approval Required
+              <p className="text-[12px] font-medium text-zinc-500">
+                Your approval is needed
               </p>
-              <h2 id="approval-title" className="mt-0.5 text-base font-semibold text-foreground">
+              <h2 id="approval-title" className="mt-0.5 text-lg font-bold text-foreground">
                 Confirm this action
               </h2>
             </div>
@@ -105,7 +105,7 @@ export function ApprovalModal() {
 
           <div className="px-6 py-5">
             {/* Action summary */}
-            <p id="approval-desc" className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+            <p id="approval-desc" className="text-[12px] font-medium text-zinc-500">
               Pending action
             </p>
             <p className="mt-1.5 text-lg font-semibold text-foreground">
@@ -117,7 +117,7 @@ export function ApprovalModal() {
 
             {/* What will happen */}
             <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 space-y-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              <p className="text-[12px] font-medium text-zinc-500">
                 What will happen
               </p>
               <ul className="space-y-2">
@@ -127,7 +127,7 @@ export function ApprovalModal() {
                 </li>
                 <li className="flex items-start gap-2.5 text-[13px] text-zinc-600">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-300" aria-hidden="true" />
-                  Access may end according to the service's cancellation policy.
+                  Access may end according to the service&apos;s cancellation policy.
                 </li>
                 <li className="flex items-start gap-2.5 text-[13px] font-medium text-amber-700">
                   <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
@@ -198,6 +198,7 @@ export function ApprovalModal() {
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }

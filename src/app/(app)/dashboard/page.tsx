@@ -1,463 +1,160 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  ScanSearch,
-  Bot,
-  History,
-  ShieldCheck,
-  ShieldAlert,
-  BadgeCheck,
-  Clock,
-  Zap,
-  AlertTriangle,
-  CheckCircle2,
-  Activity,
-} from "lucide-react";
+import { ArrowUpRight, Globe, ScanSearch } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
-import { AgentPipeline } from "@/components/agent/AgentPipeline";
-import { AgentEventStream } from "@/components/agent/AgentEventStream";
-import { AgentDecision } from "@/components/agent/AgentDecision";
+import { demoTargetUrl } from "@/lib/api";
+import { AGENT_SHORT } from "@/lib/constants";
+import { cn, formatTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PATTERN_LABELS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { CountUp, Marker } from "@/components/ui/case";
 
-// ── Metric card ───────────────────────────────────────────────────────────────
+const WATCHLIST = [
+  { name: "Confirmshaming", plain: "Guilt-trip buttons like “No, I don’t want to save money”." },
+  { name: "Roach motel", plain: "One click to join, a maze of screens to leave." },
+  { name: "Forced continuity", plain: "A free trial that quietly becomes a paid plan." },
+  { name: "False urgency", plain: "Fake countdowns and “only 2 left” pressure." },
+];
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-  index,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-  hint: string;
-  tone: "brand" | "warning" | "success" | "danger" | "neutral";
-  index: number;
-}) {
-  const toneMap = {
-    brand:   { icon: "bg-brand-soft text-brand",        border: "border-brand/20" },
-    warning: { icon: "bg-amber-50 text-amber-600",      border: "border-amber-100" },
-    success: { icon: "bg-emerald-50 text-emerald-600",  border: "border-emerald-100" },
-    danger:  { icon: "bg-red-50 text-red-600",          border: "border-red-100" },
-    neutral: { icon: "bg-zinc-100 text-zinc-500",       border: "border-zinc-200" },
-  };
-  const t = toneMap[tone];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-      className={cn("rounded-xl border bg-white p-4 shadow-sm", t.border)}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium text-zinc-500">{label}</p>
-        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", t.icon)}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </span>
-      </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-zinc-900">
-        {value}
-      </p>
-      <p className="mt-0.5 text-[11px] text-zinc-400">{hint}</p>
-    </motion.div>
-  );
-}
-
-// ── Quick action ──────────────────────────────────────────────────────────────
-
-function QuickAction({
-  icon: Icon,
-  label,
-  description,
-  href,
-  accent,
-}: {
-  icon: React.ElementType;
-  label: string;
-  description: string;
-  href: string;
-  accent?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex items-center gap-3 rounded-xl border p-4 transition-all hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-        accent
-          ? "border-brand/20 bg-brand-soft hover:border-brand/40"
-          : "border-zinc-200 bg-white hover:bg-zinc-50"
-      )}
-    >
-      <span
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
-          accent ? "bg-brand text-white" : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200"
-        )}
-      >
-        <Icon className="h-5 w-5" aria-hidden="true" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className={cn("text-sm font-semibold", accent ? "text-brand" : "text-zinc-800")}>
-          {label}
-        </p>
-        <p className="mt-0.5 text-[11px] text-zinc-400">{description}</p>
-      </div>
-      <ArrowRight
-        className={cn(
-          "h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5",
-          accent ? "text-brand" : "text-zinc-300"
-        )}
-        aria-hidden="true"
-      />
-    </Link>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
+const STATUS_COPY = {
+  idle: "No case open. Scan a page or send the agent in.",
+  running: "Working through the page now.",
+  blocked: "Paused. It needs your approval to continue.",
+  completed: "Finished the last case and saved proof.",
+  failed: "Stopped before finishing. Check the case log.",
+} as const;
 
 export default function OverviewPage() {
+  const router = useRouter();
   const store = useAgentStore();
-  const isIdle = store.status === "idle";
-  const isBlocked = store.status === "blocked";
-  const isRunning = store.status === "running";
+  const [url, setUrl] = useState("");
 
-  // Real metrics from store
-  const successEvents = store.events.filter((e) => e.status === "success").length;
-  const pendingApproval = store.approvalRequired ? 1 : 0;
+  const scan = (target: string) => router.push(`/scanner?url=${encodeURIComponent(target)}`);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t = url.trim();
+    if (t) scan(/^https?:\/\//i.test(t) ? t : `https://${t}`);
+  };
+
+  const stats = [
+    { label: "cases this session", value: store.task ? 1 : 0 },
+    { label: "traps caught", value: store.patterns.length },
+    { label: "agent steps done", value: store.events.filter((e) => e.status === "success").length },
+    { label: "waiting for you", value: store.approvalRequired ? 1 : 0, alert: store.approvalRequired },
+  ];
+  const recent = [...store.events].reverse().slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-
-      {/* ── Hero header ──────────────────────────── */}
-      <section
-        className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white px-6 py-8 sm:px-8 sm:py-10"
-        aria-labelledby="overview-heading"
-      >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            background:
-              "radial-gradient(ellipse 800px 300px at 0% 0%, rgba(37,99,235,0.06), transparent), radial-gradient(ellipse 500px 250px at 100% 100%, rgba(16,185,129,0.04), transparent)",
-          }}
-          aria-hidden="true"
-        />
-        <div className="relative">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  TrapKiller
-                </span>
-                <span className="h-px w-5 bg-zinc-200" aria-hidden="true" />
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-dot-pulse"
-                    aria-hidden="true"
-                  />
-                  Protection active
-                </span>
-              </div>
-              <h1
-                id="overview-heading"
-                className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl"
-              >
-                AI Consumer Protection Agent
-              </h1>
-              <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-500">
-                TrapKiller detects potential deceptive patterns, explains the evidence,
-                and helps you navigate the web with more control — keeping you in charge
-                of every irreversible decision.
-              </p>
-            </div>
-
-            {isBlocked && (
-              <Link
-                href="/agent"
-                className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                <ShieldAlert className="h-4 w-4 animate-dot-pulse" aria-hidden="true" />
-                Approval Required
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Metrics ──────────────────────────────── */}
-      <section
-        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-        aria-label="Summary metrics"
-      >
-        <MetricCard
-          icon={Zap}
-          label="Investigations"
-          value={store.task ? 1 : 0}
-          hint={store.task ? `Investigating ${store.task.domain}` : "this session"}
-          tone="brand"
-          index={0}
-        />
-        <MetricCard
-          icon={AlertTriangle}
-          label="Patterns Detected"
-          value={store.patterns.length}
-          hint="automated estimate"
-          tone="warning"
-          index={1}
-        />
-        <MetricCard
-          icon={BadgeCheck}
-          label="Actions Completed"
-          value={successEvents}
-          hint="this session"
-          tone="success"
-          index={2}
-        />
-        <MetricCard
-          icon={Clock}
-          label="Awaiting Approval"
-          value={pendingApproval}
-          hint={pendingApproval > 0 ? "action required" : "none pending"}
-          tone={pendingApproval > 0 ? "danger" : "neutral"}
-          index={3}
-        />
-      </section>
-
-      {/* ── Main two-column ───────────────────────── */}
-      <div className="grid gap-5 xl:grid-cols-3">
-
-        {/* Left: pipeline + events (2/3) */}
-        <div className="space-y-4 xl:col-span-2">
-
-          {/* Agent pipeline */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  Agent Pipeline
-                </p>
-                <h2 className="mt-0.5 text-sm font-semibold text-zinc-900">
-                  {isIdle
-                    ? "Pipeline idle"
-                    : isRunning
-                    ? "Session in progress"
-                    : isBlocked
-                    ? "Waiting for approval"
-                    : "Pipeline complete"}
-                </h2>
-              </div>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
-                  isBlocked
-                    ? "border-amber-200 bg-amber-50 text-amber-700"
-                    : isRunning
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-400"
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    isBlocked
-                      ? "bg-amber-500 animate-dot-pulse"
-                      : isRunning
-                      ? "bg-emerald-500 animate-dot-pulse"
-                      : "bg-zinc-300"
-                  )}
-                  aria-hidden="true"
-                />
-                {isBlocked ? "Approval Required" : isRunning ? "Active" : "Idle"}
-              </span>
-            </div>
-            <AgentPipeline />
-          </div>
-
-          {/* Event stream */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <AgentEventStream events={store.events} maxHeight="h-[260px]" />
-          </div>
+    <div className="space-y-12">
+      {/* Hero: the question, and the place to answer it */}
+      <section className="grid gap-8 lg:grid-cols-[1fr_340px] lg:items-end">
+        <div>
+          <h1 className="max-w-[16ch] text-[44px] font-bold leading-[1.02] sm:text-[56px]">
+            Which site is trying to <Marker delay={0.35}>trap you?</Marker>
+          </h1>
+          <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-500">
+            Paste a subscription or checkout page. TrapKiller reads it like an investigator, marks every
+            trick it finds, and only acts when you say so.
+          </p>
+          <form onSubmit={submit} className="mt-7 flex max-w-xl flex-col gap-2 sm:flex-row">
+            <label className="relative flex-1">
+              <span className="sr-only">Page address</span>
+              <Globe className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="netflix.com/account"
+                className="h-12 w-full rounded-xl border border-border-strong bg-surface pl-11 pr-4 text-[15px] placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15"
+              />
+            </label>
+            <Button type="submit" size="lg" className="h-12 rounded-xl px-6">
+              <ScanSearch className="h-4 w-4" aria-hidden="true" />
+              Scan page
+            </Button>
+          </form>
+          <button
+            type="button"
+            onClick={() => scan(demoTargetUrl())}
+            className="mt-3 text-[13px] font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            No page handy? Try the StreamVault test site
+          </button>
         </div>
 
-        {/* Right: quick actions + patterns + decision (1/3) */}
-        <div className="space-y-4">
+        <Link
+          href="/agent"
+          className="group rounded-2xl bg-foreground p-5 text-white transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <p className="flex items-center justify-between text-[13px] text-white/60">
+            The agent
+            <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+          </p>
+          <p className="font-display mt-3 text-[22px] font-bold leading-tight">
+            {store.task ? store.task.domain : "Ready when you are"}
+          </p>
+          <p className={cn("mt-1.5 text-[13.5px]", store.status === "blocked" ? "text-marker" : "text-white/70")}>
+            {STATUS_COPY[store.status] ?? STATUS_COPY.idle}
+          </p>
+        </Link>
+      </section>
 
-          {/* Quick actions */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              Quick Actions
+      {/* One strip of numbers instead of a grid of identical cards */}
+      <section aria-label="This session" className="grid grid-cols-2 border-y border-border sm:grid-cols-4">
+        {stats.map((s, i) => (
+          <div key={s.label} className={cn("py-5", i > 0 && "sm:border-l sm:border-border sm:pl-6", i % 2 === 1 && "border-l border-border pl-6")}>
+            <p className={cn("font-display text-[36px] font-bold leading-none tabular-nums", s.alert && "text-amber-600")}>
+              <CountUp to={s.value} />
             </p>
-            <div className="space-y-2">
-              <QuickAction
-                icon={ScanSearch}
-                label="Scan a Website"
-                description="Analyze any URL for patterns"
-                href="/scanner"
-                accent
-              />
-              <QuickAction
-                icon={Bot}
-                label="Open Agent"
-                description="Start a guided investigation"
-                href="/agent"
-              />
-              <QuickAction
-                icon={History}
-                label="View Activity"
-                description="Browse the audit log"
-                href="/activity"
-              />
-            </div>
+            <p className="mt-1.5 text-[13px] text-zinc-500">{s.label}</p>
           </div>
+        ))}
+      </section>
 
-          {/* Agent decision (only when present) */}
-          {store.decision && <AgentDecision decision={store.decision} />}
-
-          {/* Detected patterns */}
-          {store.patterns.length > 0 && (
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  Potential Patterns
-                </p>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                  {store.patterns.length}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {store.patterns.slice(0, 3).map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-start gap-2.5 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5"
-                  >
-                    <span
-                      className={cn(
-                        "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                        p.severity === "critical" || p.severity === "high"
-                          ? "bg-red-500"
-                          : p.severity === "medium"
-                          ? "bg-amber-500"
-                          : "bg-zinc-400"
-                      )}
-                      aria-hidden="true"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-zinc-800">
-                        {PATTERN_LABELS[p.type] ?? p.type}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-zinc-500 truncate">
-                        {p.element}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-[10px] tabular-nums font-medium text-zinc-400">
-                      {p.confidence <= 1
-                        ? `${Math.round(p.confidence * 100)}%`
-                        : `${Math.round(p.confidence)}%`}
-                    </span>
-                  </div>
-                ))}
-                {store.patterns.length > 3 && (
-                  <Link
-                    href="/agent"
-                    className="block text-center text-[11px] font-medium text-brand hover:underline mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-                  >
-                    +{store.patterns.length - 3} more →
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Verification result */}
-          {store.verification && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-start gap-2.5">
-                <CheckCircle2
-                  className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"
-                  aria-hidden="true"
-                />
-                <div>
-                  <p className="text-[13px] font-semibold text-emerald-800">
-                    Outcome Verified
+      <section className="grid gap-10 lg:grid-cols-[1fr_380px]">
+        <div>
+          <h2 className="text-[22px] font-bold">Latest from the agent</h2>
+          {recent.length === 0 ? (
+            <p className="mt-4 rounded-2xl border border-dashed border-border-strong px-5 py-10 text-center text-[14px] text-zinc-500">
+              Nothing yet. Every step the agent takes will be logged here, with a timestamp.
+            </p>
+          ) : (
+            <ol className="mt-4 divide-y divide-border">
+              {recent.map((e, i) => (
+                <motion.li
+                  key={e.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-baseline gap-4 py-3"
+                >
+                  <time className="w-16 shrink-0 font-mono text-[12px] text-zinc-400">{formatTime(e.timestamp)}</time>
+                  <p className="min-w-0 flex-1 text-[14px]">
+                    <span className="font-semibold">{AGENT_SHORT[e.agent]}</span>
+                    <span className="text-zinc-600"> {e.message}</span>
                   </p>
-                  <p className="mt-0.5 text-[11px] text-emerald-700">
-                    {store.verification.status}
-                  </p>
-                  {store.verification.proofId && (
-                    <p className="mt-1 font-mono text-[10px] text-emerald-600/70">
-                      Proof: {store.verification.proofId}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Empty state / onboarding */}
-          {isIdle && store.patterns.length === 0 && (
-            <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-5 text-center">
-              <ShieldCheck
-                className="mx-auto h-8 w-8 text-zinc-300"
-                aria-hidden="true"
-              />
-              <p className="mt-3 text-sm font-semibold text-zinc-700">
-                No investigations yet
-              </p>
-              <p className="mt-1 text-[12px] leading-5 text-zinc-400">
-                Start your first investigation to see how TrapKiller analyzes a webpage
-                for deceptive patterns.
-              </p>
-              <Button asChild size="sm" className="mt-4">
-                <Link href="/scanner">
-                  <ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />
-                  Scan a Website
-                </Link>
-              </Button>
-            </div>
-          )}
-
-          {/* Session metadata when active */}
-          {store.task && (
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                Current Session
-              </p>
-              <div className="mt-1.5 space-y-1">
-                <div className="flex items-center justify-between text-[12px]">
-                  <span className="text-zinc-500">Domain</span>
-                  <span className="font-medium text-zinc-700">{store.task.domain}</span>
-                </div>
-                <div className="flex items-center justify-between text-[12px]">
-                  <span className="text-zinc-500">Session ID</span>
-                  <span className="font-mono text-zinc-500">
-                    {store.task.id.slice(0, 8).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[12px]">
-                  <span className="text-zinc-500">Events</span>
-                  <span className="font-medium text-zinc-700">{store.events.length}</span>
-                </div>
-              </div>
-              <Link
-                href="/agent"
-                className="mt-2.5 flex items-center gap-1.5 text-[11px] font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-              >
-                <Activity className="h-3 w-3" aria-hidden="true" />
-                View agent
-                <ArrowRight className="h-3 w-3" aria-hidden="true" />
-              </Link>
-            </div>
+                </motion.li>
+              ))}
+            </ol>
           )}
         </div>
-      </div>
+
+        <aside>
+          <h2 className="text-[22px] font-bold">What it looks for</h2>
+          <ul className="mt-4 space-y-4">
+            {WATCHLIST.map((p, i) => (
+              <li key={p.name}>
+                <p className="text-[15px] font-semibold">
+                  <Marker delay={0.6 + i * 0.12}>{p.name}</Marker>
+                </p>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-500">{p.plain}</p>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </section>
     </div>
   );
 }

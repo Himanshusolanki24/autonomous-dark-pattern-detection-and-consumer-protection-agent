@@ -4,12 +4,9 @@ import { motion } from "framer-motion";
 import {
   Eye,
   ScanSearch,
-  FileText,
   Map,
-  UserCheck,
   MousePointerClick,
   BadgeCheck,
-  Check,
 } from "lucide-react";
 import type { AgentId, StageState } from "@/lib/types";
 import { AGENT_SHORT, PIPELINE_ORDER } from "@/lib/constants";
@@ -81,19 +78,27 @@ function StageNode({ agent, state, isLast, compact, index }: StageNodeProps) {
           aria-label={`${AGENT_SHORT[agent]}: ${state}`}
         >
           {isCompleted ? (
-            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
-              <Check className="h-3.5 w-3.5" />
-            </motion.span>
+            // The check draws itself, so "done" reads as an action that just happened.
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <motion.path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.45, ease: [0.65, 0, 0.35, 1] }}
+              />
+            </svg>
           ) : (
             STAGE_ICONS[agent]
           )}
 
-          {/* Running pulse ring */}
+          {/* Running: a dashed ring orbits the active stage. */}
           {isRunning && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3" aria-hidden="true">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
-              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-brand" />
-            </span>
+            <motion.span
+              aria-hidden="true"
+              className="absolute -inset-1.5 rounded-full border-2 border-dashed border-brand/50"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
+            />
           )}
 
           {/* Blocked indicator */}
@@ -109,7 +114,7 @@ function StageNode({ agent, state, isLast, compact, index }: StageNodeProps) {
         {!compact && (
           <div className="text-center">
             <p className={cn(
-              "text-[9px] font-bold uppercase tracking-[0.12em] transition-colors",
+              "text-[12px] font-medium transition-colors",
               isCompleted && "text-emerald-600",
               isRunning   && "text-brand",
               isFailed    && "text-red-600",
