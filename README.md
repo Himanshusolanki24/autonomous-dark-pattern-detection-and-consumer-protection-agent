@@ -81,7 +81,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Real Supabase auth and persistence |
 | `SUPABASE_DEV_MODE` | Defaults to on (in-memory store and a demo user). Set `"false"` in production: this also turns on SSRF blocking of private and loopback addresses. |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Optional LLM fallback for planning and classification, e.g. `https://api.mistral.ai/v1` with `mistral-large-latest` |
-| `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` | Optional Neo4j knowledge graph and agent memory. Detection reads prior findings, co-occurring patterns and example phrases; planning reuses clicks from verified runs; action and verification write back. LLM findings are kept only if their evidence quote appears verbatim on the page. Run `npm run graph:seed` once. The graph also holds what the agent learns from rewards: clicks are rewarded when a run is verified, and findings are rewarded by the "Is this really a dark pattern?" buttons in the scanner. |
+| `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` | Optional Neo4j knowledge graph and agent memory. Detection reads prior findings, co-occurring patterns and example phrases; planning reuses clicks from verified runs; action and verification write back. LLM findings are kept only if their evidence quote appears verbatim on the page. Run `npm run graph:seed` once. It also keeps a path map of each cancellation flow (pages linked by the clicks between them), which the planner uses to follow the shortest known route and to ask for approval before the click that lands on the cancelled page. The graph also holds what the agent learns from rewards: clicks are rewarded when a run is verified, and findings are rewarded by the "Is this really a dark pattern?" buttons in the scanner. |
 | `PROOFS_DIR` | Where proof screenshots are written (default `.proofs/`) |
 | `NEXT_PUBLIC_API_URL` | Only if the API is hosted on a different origin from the UI (default: same origin) |
 
@@ -93,6 +93,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 | GET | `/api/scanner/screenshot?url=` | Server-rendered screenshot of a page |
 | GET | `/api/graph` | Knowledge-graph snapshot (nodes and relationships) for the `/graph` page |
 | POST | `/api/graph/feedback` | Mark a finding correct or a false alarm (the detector's reward signal) |
+| GET | `/api/graph/sites` | Sites ranked by trap score, with the shortest known cancel route, for the `/sites` page |
 | GET | `/api/graph/learning` | What the agent has learned and which findings still need a verdict, for the `/learning` page |
 | POST | `/api/agent/start` | Start an agent run (202, runs in the background) |
 | GET | `/api/agent/[id]` · `/api/agent/[id]/events` · `/api/agent/[id]/proof` | Session, event log, proof screenshot |
