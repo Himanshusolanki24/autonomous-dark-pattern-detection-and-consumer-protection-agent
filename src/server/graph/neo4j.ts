@@ -6,6 +6,7 @@
 //   (:Site)-[:EXHIBITS {count, evidence}]->(:Pattern)      detection memory
 //   (:Site)-[:SHOWS]->(:Indicator)-[:INDICATES]->(:Pattern) evidence phrases
 //   (:Run)-[:ON]->(:Site), (:Run)-[:TOOK {order, path}]->(:Action)  run memory
+//   (:Site)-[:HAS_PAGE]->(:Page)-[:LEADS_TO {click}]->(:Page)      path map
 //
 // Learning (reinforcement from rewards, value = running average in -1..1):
 //   (:Indicator)-[:INDICATES {value, n}]->(:Pattern)  reward = human feedback
@@ -20,6 +21,7 @@ import neo4j, { type Driver } from "neo4j-driver";
 import type { DarkPatternDetection } from "@/types/agent";
 import type { PatternType } from "@/types/database";
 import { TAXONOMY, patternDefinition } from "@/server/detection/taxonomy";
+import { trapScore, type TrapScore } from "@/lib/trap-score";
 
 let driver: Driver | null | undefined;
 // After a failure, skip the graph for a minute so a down database costs one
@@ -234,6 +236,70 @@ export async function recordStep(
   );
 }
 
+// ponytail: a page is host + path; the query string is ignored. Key on it too
+// if a site keeps its flow steps in ?step= style parameters.
+const pageKey = (s: { host: string; path: string }) => `${s.host}${s.path}`;
+
+/**
+ * Path map: remember this page and, when a click brought the agent here, the
+ * link from the page it was made on.
+ */
+export async function recordPage(
+  url: string,
+  state: string,
+  title: string,
+  opts: { entry?: boolean; from?: { from: string; label: string } } = {}
+): Promise<void> {
+  const s = site(url);
+  if (!s) return;
+  const from = opts.from ? site(opts.from.from) : null;
+  await run(
+    "recordPage",
+    `MERGE (s:Site {host: $host})
+     MERGE (pg:Page {key: $key})
+       SET pg.host = $host, pg.path = $path, pg.state = $state, pg.title = $title,
+           pg.entry = coalesce(pg.entry, false) OR $entry
+     MERGE (s)-[:HAS_PAGE]->(pg)
+     WITH pg
+     OPTIONAL MATCH (prev:Page {key: $fromKey})
+     FOREACH (_ IN CASE WHEN prev IS NULL OR prev = pg THEN [] ELSE [1] END |
+       MERGE (prev)-[l:LEADS_TO {click: $click}]->(pg)
+         SET l.count = coalesce(l.count, 0) + 1, l.lastSeen = datetime())`,
+    {
+      host: s.host,
+      path: s.path,
+      key: pageKey(s),
+      state,
+      title: title.slice(0, 200),
+      entry: opts.entry ?? false,
+      fromKey: from ? pageKey(from) : null,
+      click: opts.from ? norm(opts.from.label).slice(0, 100) : null,
+    }
+  );
+}
+
+export interface Route {
+  /** Clicks, in order, from this page to a page where cancellation was confirmed. */
+  clicks: string[];
+  steps: number;
+}
+
+/** Shortest known route from this page to a confirmed-cancelled page on the same site. */
+export async function routeToSuccess(url: string): Promise<Route | null> {
+  const s = site(url);
+  if (!s) return null;
+  const rows = await run<Route>(
+    "routeToSuccess",
+    `MATCH (a:Page {key: $key}), (b:Page {host: $host, state: "success"})
+     WHERE a <> b
+     MATCH p = shortestPath((a)-[:LEADS_TO*..10]->(b))
+     RETURN [r IN relationships(p) | r.click] AS clicks, length(p) AS steps
+     ORDER BY steps LIMIT 1`,
+    { key: pageKey(s), host: s.host }
+  );
+  return rows?.[0] ?? null;
+}
+
 /** Reward per outcome. A run a human stopped says nothing about the clicks. */
 const REWARD = { verified: 1, unverified: -1, failed: -1, stopped: 0 } as const;
 
@@ -379,6 +445,69 @@ export async function learningSnapshot(): Promise<LearningSnapshot> {
 }
 
 // -----------------------------------------------------------------------------
+// Site ranking
+// -----------------------------------------------------------------------------
+
+export interface SiteRank extends TrapScore {
+  host: string;
+  patterns: { type: string; label: string; severity: string; evidence: string; seen: number }[];
+  /** Shortest known route from the page a run started on to a cancelled page. */
+  route: string[] | null;
+  cancelRuns: number;
+  verifiedRuns: number;
+}
+
+export async function siteRanking(): Promise<{ status: GraphSnapshot["status"]; sites: SiteRank[] }> {
+  if (!process.env.NEO4J_URI) return { status: "off", sites: [] };
+  const [sites, routes] = await Promise.all([
+    run<{ host: string; patterns: { type: PatternType; evidence: string; seen: number }[]; cancelRuns: number; verifiedRuns: number }>(
+      "ranking sites",
+      `MATCH (s:Site)
+       OPTIONAL MATCH (s)-[e:EXHIBITS]->(p:Pattern)
+       WITH s, [x IN collect({type: p.type, evidence: e.evidence, seen: e.count}) WHERE x.type IS NOT NULL] AS patterns
+       OPTIONAL MATCH (r:Run {goal: "cancel_subscription"})-[:ON]->(s)
+         WHERE r.status IN ["verified", "unverified", "failed"]
+       RETURN s.host AS host, patterns, count(r) AS cancelRuns,
+              sum(CASE r.status WHEN "verified" THEN 1 ELSE 0 END) AS verifiedRuns`,
+      {}
+    ),
+    run<{ host: string; clicks: string[] }>(
+      "ranking routes",
+      `MATCH (a:Page {entry: true}), (b:Page {state: "success"})
+       WHERE a.host = b.host AND a <> b
+       MATCH p = shortestPath((a)-[:LEADS_TO*..10]->(b))
+       WITH a.host AS host, p ORDER BY length(p)
+       WITH host, collect(p)[0] AS p
+       RETURN host, [r IN relationships(p) | r.click] AS clicks`,
+      {}
+    ),
+  ]);
+  if (!sites || !routes) return { status: "down", sites: [] };
+  const routeOf = new Map(routes.map((r) => [r.host, r.clicks]));
+  const ranked = sites.map((s) => {
+    const patterns = s.patterns.map((p) => {
+      const def = patternDefinition(p.type);
+      return { ...p, label: def.label, severity: def.defaultSeverity };
+    });
+    const route = routeOf.get(s.host) ?? null;
+    return {
+      host: s.host,
+      patterns,
+      route,
+      cancelRuns: s.cancelRuns,
+      verifiedRuns: s.verifiedRuns,
+      ...trapScore({
+        severities: patterns.map((p) => p.severity),
+        cancelClicks: route?.length ?? null,
+        cancelRuns: s.cancelRuns,
+        verifiedRuns: s.verifiedRuns,
+      }),
+    };
+  });
+  return { status: "ok", sites: ranked.sort((a, b) => b.score - a.score) };
+}
+
+// -----------------------------------------------------------------------------
 // One-off setup (npm run graph:seed)
 // -----------------------------------------------------------------------------
 
@@ -390,6 +519,7 @@ export async function seedGraph(indicators: Partial<Record<PatternType, string[]
     ["Indicator", "phrase"],
     ["Run", "id"],
     ["Action", "label"],
+    ["Page", "key"],
   ];
   for (const [label, prop] of unique) {
     const ok = await run(

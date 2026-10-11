@@ -50,11 +50,13 @@ export const actNode: NodeHandler = async (
   });
 
   const urlBefore = browser.page.url();
+  let lastClick: AgentState["lastClick"];
   try {
     await executeAction(browser.page, actionToRun as AgentAction);
     // Graph memory: remember clicks that really executed, and from which page.
     if (actionToRun.type === "click" && actionToRun.target) {
       await recordStep(state.sessionId, state.goal, urlBefore, nextCount, actionToRun.target);
+      lastClick = { from: urlBefore, label: actionToRun.target };
     }
   } catch (err) {
     // A single failed action retries up to once, then fails the run.
@@ -87,6 +89,7 @@ export const actNode: NodeHandler = async (
   return {
     currentStage: "action",
     actionCount: nextCount,
+    lastClick,
     pendingFinalAction: undefined,
     resumeApproval: undefined,
   };

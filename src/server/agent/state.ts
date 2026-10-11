@@ -41,6 +41,8 @@ export const AgentStateAnnotation = Annotation.Root({
   errorMessage: Annotation<string | undefined>,
   evidence: Annotation<string | undefined>,
   resumeApproval: Annotation<string | undefined>,
+  /** The click ACT just executed and the page it was made from; consumed by PERCEIVE to map the flow. */
+  lastClick: Annotation<{ from: string; label: string } | undefined>,
 });
 
 export type AgentState = typeof AgentStateAnnotation.State;

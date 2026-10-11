@@ -50,6 +50,7 @@ function initialState(input: StartRunInput): AgentState {
     errorMessage: undefined,
     evidence: undefined,
     resumeApproval: undefined,
+    lastClick: undefined,
   };
 }
 

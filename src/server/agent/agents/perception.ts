@@ -10,6 +10,7 @@ import { perceive } from "@/server/browser/perception";
 import { emitEvent } from "../events";
 import { MAX_ACTIONS } from "@/types/agent";
 import { browserManager } from "@/server/browser/manager";
+import { recordPage } from "@/server/graph/neo4j";
 
 export const perceiveNode: NodeHandler = async (
   state: AgentState,
@@ -55,7 +56,12 @@ export const perceiveNode: NodeHandler = async (
 
   const result = await perceive(page);
   // Hand the preview a picture of the page we already have open.
-  await browserManager.captureShot(page, result.url, ...(firstVisit ? [state.targetUrl] : []));
+  // The runner has usually navigated already, so "first look" is judged from
+  // the run's state: nothing has been perceived yet.
+  const firstLook = !state.lastUrl;
+  await browserManager.captureShot(page, result.url, ...(firstLook ? [state.targetUrl] : []));
+  // Path map: this page, and the click that led here from the previous one.
+  await recordPage(result.url, result.pageState, result.title, { entry: firstLook, from: state.lastClick });
 
   await emitEvent(ctx.supabase, state.sessionId, {
     userId: state.userId,
@@ -68,6 +74,7 @@ export const perceiveNode: NodeHandler = async (
   return {
     currentStage: "perception",
     lastUrl: result.url,
+    lastClick: undefined,
     lastDetection: undefined,
     lastDecision: `On ${result.url} (${result.pageState})`,
   };

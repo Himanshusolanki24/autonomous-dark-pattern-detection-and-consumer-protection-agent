@@ -27,6 +27,7 @@ const KINDS: Record<string, { color: string; ring: string; plural: string; name:
   Indicator: { color: "#ffe15a", ring: "#b89400", plural: "Evidence phrases", name: (p) => `“${str(p.phrase)}”` },
   Run: { color: "#1f8a5b", ring: "#1f8a5b", plural: "Agent runs", name: (p) => `Run · ${str(p.status)}` },
   Action: { color: "#d9831f", ring: "#d9831f", plural: "Clicks", name: (p) => `Click “${str(p.label)}”` },
+  Page: { color: "#0f766e", ring: "#0f766e", plural: "Pages", name: (p) => str(p.path) },
 };
 const OTHER = { color: "#9aa0a6", ring: "#6f7581", plural: "Other", name: (p: Props) => str(Object.values(p)[0]) };
 const kind = (label: string) => KINDS[label] ?? OTHER;
@@ -38,6 +39,8 @@ const REL_TEXT: Record<string, string> = {
   ON: "ran on",
   TOOK: "took step",
   POLICY: "learned click",
+  HAS_PAGE: "has page",
+  LEADS_TO: "leads to",
 };
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);

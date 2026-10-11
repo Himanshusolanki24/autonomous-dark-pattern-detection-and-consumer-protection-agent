@@ -11,7 +11,7 @@ import { emitEvent } from "../events";
 import { chatStructured } from "@/server/llm/client";
 import { z } from "zod";
 import { MAX_ACTIONS } from "@/types/agent";
-import { LEARNED_THRESHOLD, learnedSteps } from "@/server/graph/neo4j";
+import { LEARNED_THRESHOLD, learnedSteps, routeToSuccess } from "@/server/graph/neo4j";
 
 // Explicit cancellation affordances — clicking these leads to (or is) the
 // actual cancellation. Checked before anything else.
@@ -132,9 +132,13 @@ export const planNode: NodeHandler = async (
 
   // Reinforcement memory: the learned value of each click tried from this page
   // (rewarded +1 when its run ended verified, -1 when it failed).
-  const learned = await learnedSteps(perception.url);
-  const valueOf = (el: (typeof elements)[number]) =>
-    learned.get(el.text.toLowerCase().replace(/\s+/g, " ").trim()) ?? 0;
+  // Path map: the shortest known route from this page to a cancelled page.
+  const [learned, route] = await Promise.all([learnedSteps(perception.url), routeToSuccess(perception.url)]);
+  type El = (typeof elements)[number];
+  const labelOf = (el: El) => el.text.toLowerCase().replace(/\s+/g, " ").trim();
+  const onRoute = (el: El) => route !== null && labelOf(el) === route.clicks[0];
+  // The next click on the shortest route outranks any learned score (-1..1).
+  const valueOf = (el: El) => (learned.get(labelOf(el)) ?? 0) + (onRoute(el) ? 2 : 0);
   /** Highest learned value wins; page order breaks ties, as before. */
   const best = (candidates: typeof elements) => [...candidates].sort((a, b) => valueOf(b) - valueOf(a))[0];
 
@@ -190,12 +194,22 @@ export const planNode: NodeHandler = async (
     )
   );
   if (provenEl) {
+    const name = provenEl.text.slice(0, 60);
+    const viaRoute = route !== null && onRoute(provenEl);
     action = {
       type: "click",
       target: provenEl.text.slice(0, 100),
-      reason: `Learned: "${provenEl.text.slice(0, 60)}" led to a verified outcome here before (value ${valueOf(provenEl).toFixed(2)})`,
+      reason: viaRoute
+        ? `Shortest known route: "${name}" (${route.steps} click(s) from here to the cancelled page)`
+        : `Learned: "${name}" led to a verified outcome here before (value ${(learned.get(labelOf(provenEl)) ?? 0).toFixed(2)})`,
     };
-    decision = `Following a learned step: "${provenEl.text.slice(0, 60)}"`;
+    // The path map says this click lands on the cancelled page, so it is the
+    // irreversible step whatever the button is called: a human approves it.
+    if (viaRoute && route.steps === 1 && state.resumeApproval !== "approved") {
+      decision = `Awaiting human approval before: "${name}"`;
+      return { currentStage: "planning", pendingFinalAction: action, lastDecision: decision };
+    }
+    decision = viaRoute ? `Following the shortest known route: "${name}"` : `Following a learned step: "${name}"`;
     return { currentStage: "planning", lastAction: action, lastDecision: decision };
   }
 
@@ -210,6 +224,7 @@ export const planNode: NodeHandler = async (
       `Graph memory (learned clicks from this page): ${
         [...learned].map(([label, value]) => `"${label}" (${value.toFixed(2)})`).join(", ") || "none"
       }`,
+      `Shortest known route to a cancelled page: ${route ? route.clicks.map((c) => `"${c}"`).join(" then ") : "none"}`,
       `Visible text (truncated): ${perception.visibleText.slice(0, 2500)}`,
       `Elements: ${perception.elements
         .map((e) => `[${e.role}] "${e.text}"`)

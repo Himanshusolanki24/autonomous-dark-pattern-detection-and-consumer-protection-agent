@@ -22,6 +22,7 @@ function baseState(): AgentState {
     errorMessage: undefined,
     evidence: undefined,
     resumeApproval: undefined,
+    lastClick: undefined,
   };
 }
 
