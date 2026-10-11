@@ -56,6 +56,8 @@ export interface DarkPattern {
   element: string;
   explanation: string;
   whyItMatters: string;
+  /** Present when the finding has quoted evidence the user can rate. */
+  feedback?: { patternType: string; evidence: string };
 }
 
 export interface CancellationTask {

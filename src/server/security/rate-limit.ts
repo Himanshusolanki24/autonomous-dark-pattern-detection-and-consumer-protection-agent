@@ -14,6 +14,7 @@ export interface RateLimitConfig {
 export const DEFAULT_RATE_LIMITS: Record<string, RateLimitConfig> = {
   agentStart: { limit: 10, windowMs: 60 * 60 * 1000 }, // 10/hour
   scanner: { limit: 30, windowMs: 60 * 60 * 1000 }, // 30/hour
+  feedback: { limit: 120, windowMs: 60 * 60 * 1000 }, // 120/hour
   approval: { limit: 20, windowMs: 60 * 60 * 1000 }, // 20/hour
 };
 

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, X, Eye } from "lucide-react";
+import { AlertTriangle, X, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
+import { api } from "@/lib/api";
 import type { DarkPattern } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,28 @@ export function EvidenceDrawer({
   pattern,
   onViewEvidence,
 }: EvidenceDrawerProps) {
+  // Keyed by finding so the answer resets when a different one is opened.
+  const [rated, setRated] = useState<{ id: string; text: string } | null>(null);
   if (!isOpen || !pattern) return null;
+
+  const rating = rated?.id === pattern.id ? rated.text : null;
+  const rate = (correct: boolean) => {
+    if (!pattern.feedback) return;
+    setRated({ id: pattern.id, text: "Saving…" });
+    api
+      .post<{ learned: boolean }>("/api/graph/feedback", { ...pattern.feedback, correct })
+      .then((r) =>
+        setRated({
+          id: pattern.id,
+          text: !r.learned
+            ? "Couldn't save — the knowledge graph is not connected."
+            : correct
+              ? "Thanks. The agent will flag this wording from now on."
+              : "Thanks. The agent will stop flagging this wording.",
+        })
+      )
+      .catch((e: Error) => setRated({ id: pattern.id, text: `Couldn't save: ${e.message}` }));
+  };
 
   return (
     <motion.div
@@ -116,6 +139,29 @@ export function EvidenceDrawer({
             </p>
             <p className="mt-1 text-zinc-500">DOM / visible text</p>
           </div>
+
+          {pattern.feedback && (
+            <div className="mt-5 rounded-xl border border-border bg-zinc-50 p-3">
+              <p className="text-sm font-medium text-zinc-800">Is this really a dark pattern?</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Your answer teaches the agent.</p>
+              {rating ? (
+                <p className="mt-2 text-sm text-zinc-700" role="status">
+                  {rating}
+                </p>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => rate(true)}>
+                    <ThumbsUp className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    Yes, correct
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => rate(false)}>
+                    <ThumbsDown className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    No, false alarm
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-6">
             <Button

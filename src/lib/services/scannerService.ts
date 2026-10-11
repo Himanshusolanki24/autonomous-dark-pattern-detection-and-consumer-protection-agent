@@ -58,6 +58,7 @@ export async function scanUrl(url: string): Promise<ScanResult> {
     explanation: d.explanation,
     whyItMatters:
       "This pattern was flagged automatically. Review the evidence before proceeding.",
+    feedback: d.elementText ? { patternType: d.patternType, evidence: d.elementText } : undefined,
   }));
 
 const perception: PerceptionData = {
