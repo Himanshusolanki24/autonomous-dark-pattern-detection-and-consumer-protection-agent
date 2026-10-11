@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Settings,
   Network,
+  GraduationCap,
 } from "lucide-react";
 
 export interface NavItem {
@@ -27,6 +28,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/tasks", label: "Cancellations", icon: ListChecks, description: "Manage cancellations" },
       { href: "/activity", label: "Activity", icon: History, description: "Audit log" },
       { href: "/graph", label: "Knowledge graph", icon: Network, description: "What the agents remember" },
+      { href: "/learning", label: "Learning", icon: GraduationCap, description: "Teach the agent and see what it learned" },
     ],
   },
   {

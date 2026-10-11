@@ -11,7 +11,7 @@ import { emitEvent } from "../events";
 import { chatStructured } from "@/server/llm/client";
 import { z } from "zod";
 import { MAX_ACTIONS } from "@/types/agent";
-import { learnedSteps } from "@/server/graph/neo4j";
+import { LEARNED_THRESHOLD, learnedSteps } from "@/server/graph/neo4j";
 
 // Explicit cancellation affordances — clicking these leads to (or is) the
 // actual cancellation. Checked before anything else.
@@ -186,7 +186,7 @@ export const planNode: NodeHandler = async (
   //     Only used if it is on the page right now.
   const provenEl = best(
     elements.filter(
-      (el) => valueOf(el) >= 0.4 && !RETENTION_TRAP.some((m) => el.text.toLowerCase().includes(m))
+      (el) => valueOf(el) >= LEARNED_THRESHOLD && !RETENTION_TRAP.some((m) => el.text.toLowerCase().includes(m))
     )
   );
   if (provenEl) {

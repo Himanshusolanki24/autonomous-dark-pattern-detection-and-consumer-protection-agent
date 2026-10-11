@@ -1,13 +1,14 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, Play, RotateCcw, Square } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { fetchSession, startPolling, stopSession } from "@/lib/services/agentService";
 import { startCancellation } from "@/lib/services/taskService";
-import { BACKEND_URL, demoTargetUrl } from "@/lib/api";
+import { ApiError, BACKEND_URL, demoTargetUrl } from "@/lib/api";
 import { AGENT_SHORT, PATTERN_LABELS, PIPELINE_ORDER } from "@/lib/constants";
 import { cn, formatTime, hostnameOf, nowIso } from "@/lib/utils";
 import type { AgentId, CancellationTask, StageState } from "@/lib/types";
@@ -144,8 +145,13 @@ function AgentConsole() {
         store.setLive(true);
         router.replace(`/agent?session=${res.sessionId}`);
         follow(res.sessionId);
-      } catch {
-        setError("The agent couldn’t start. Make sure the app server is running (npm run dev) and try again.");
+      } catch (e) {
+        // Status 0 means the server could not be reached; anything else is the server's own reason.
+        setError(
+          e instanceof ApiError && e.status !== 0
+            ? `The agent couldn’t start: ${e.message}`
+            : "The agent couldn’t start. Make sure the app server is running (npm run dev) and try again."
+        );
       } finally {
         setStarting(false);
       }
@@ -333,6 +339,15 @@ function AgentConsole() {
                   </li>
                 ))}
               </ul>
+              {(isDone || isFailed) && (
+                <p className="mt-4 text-[13px] text-zinc-600">
+                  Did it get these right?{" "}
+                  <Link href="/learning" className="font-medium text-brand underline underline-offset-2 hover:text-blue-700">
+                    Review the findings
+                  </Link>{" "}
+                  so the agent learns from this case.
+                </p>
+              )}
             </div>
           )}
         </div>

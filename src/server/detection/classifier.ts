@@ -10,7 +10,13 @@ import type { PerceptionResult, DarkPatternDetection, DetectionResult } from "@/
 import type { PatternType, Severity } from "@/types/database";
 import { TAXONOMY, overallRisk, patternDefinition } from "./taxonomy";
 import { chatStructured } from "@/server/llm/client";
-import { graphContext, recordFindings, type GraphContext, type LearnedIndicator } from "@/server/graph/neo4j";
+import {
+  LEARNED_THRESHOLD,
+  graphContext,
+  recordFindings,
+  type GraphContext,
+  type LearnedIndicator,
+} from "@/server/graph/neo4j";
 
 // -----------------------------------------------------------------------------
 // Heuristic signals
@@ -73,7 +79,7 @@ const em = (s: string) => s.toLowerCase();
 
 /** Boost a confidence by an additional strong signal, capped at 0.99. */
 const boost = (base: number, signals: number): number =>
-  Math.min(0.99, base + signals * 0.05);
+  Math.round(Math.min(0.99, base + signals * 0.05) * 100) / 100;
 
 function findInElements(
   perception: PerceptionResult,
@@ -230,9 +236,6 @@ export function isGrounded(evidence: string, perception: PerceptionResult): bool
   );
   return page.includes(quote);
 }
-
-/** How far a learned value must be from 0 before the agent acts on it. */
-const LEARNED_THRESHOLD = 0.4;
 
 /**
  * Apply what human feedback has taught: drop findings whose exact evidence was

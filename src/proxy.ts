@@ -46,6 +46,7 @@ export const config = {
     "/cancellations/:path*",
     "/activity/:path*",
     "/graph/:path*",
+    "/learning/:path*",
     "/settings/:path*",
   ],
 };

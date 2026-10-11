@@ -74,6 +74,9 @@ const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 /** Learning rate: how far one reward moves a value toward it (value += ALPHA * (reward - value)). */
 const ALPHA = 0.5;
 
+/** How far a learned value must be from 0 before the agent acts on it. */
+export const LEARNED_THRESHOLD = 0.4;
+
 // -----------------------------------------------------------------------------
 // Detection memory
 // -----------------------------------------------------------------------------
@@ -326,6 +329,53 @@ export async function graphSnapshot(): Promise<GraphSnapshot> {
     nodes: nodes.map((n) => ({ ...n, props: plain(n.props) })),
     links: links.map((l) => ({ ...l, props: plain(l.props) })),
   };
+}
+
+// -----------------------------------------------------------------------------
+// Snapshot for the learning page
+// -----------------------------------------------------------------------------
+
+export interface LearningSnapshot {
+  status: GraphSnapshot["status"];
+  threshold: number;
+  /** Evidence phrases seen on real pages; value is null until a human rates one. */
+  findings: { patternType: string; label: string; phrase: string; sites: string[]; value: number | null; votes: number }[];
+  /** Clicks the planner has a learned value for. */
+  clicks: { host: string; path: string; label: string; value: number; runs: number }[];
+  /** How many runs ended in each outcome. */
+  runs: { status: string; count: number }[];
+}
+
+export async function learningSnapshot(): Promise<LearningSnapshot> {
+  const empty = { threshold: LEARNED_THRESHOLD, findings: [], clicks: [], runs: [] };
+  if (!process.env.NEO4J_URI) return { status: "off", ...empty };
+  const [findings, clicks, runs] = await Promise.all([
+    run<LearningSnapshot["findings"][number]>(
+      "learning findings",
+      `MATCH (i:Indicator)-[r:INDICATES]->(p:Pattern)
+       OPTIONAL MATCH (s:Site)-[:SHOWS]->(i)
+       WITH i, r, p, collect(DISTINCT s.host) AS sites
+       WHERE size(sites) > 0 OR r.value IS NOT NULL
+       RETURN p.type AS patternType, p.label AS label, i.phrase AS phrase, sites,
+              r.value AS value, coalesce(r.n, 0) AS votes
+       ORDER BY r.value IS NULL DESC, size(sites) DESC LIMIT 100`,
+      {}
+    ),
+    run<LearningSnapshot["clicks"][number]>(
+      "learning clicks",
+      `MATCH (s:Site)-[q:POLICY]->(a:Action)
+       RETURN s.host AS host, q.path AS path, a.label AS label, q.value AS value, q.n AS runs
+       ORDER BY q.value DESC LIMIT 100`,
+      {}
+    ),
+    run<LearningSnapshot["runs"][number]>(
+      "learning runs",
+      `MATCH (r:Run) RETURN r.status AS status, count(*) AS count`,
+      {}
+    ),
+  ]);
+  if (!findings || !clicks || !runs) return { status: "down", ...empty };
+  return { status: "ok", threshold: LEARNED_THRESHOLD, findings, clicks, runs };
 }
 
 // -----------------------------------------------------------------------------

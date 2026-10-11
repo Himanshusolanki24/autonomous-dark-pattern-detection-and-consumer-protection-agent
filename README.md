@@ -93,6 +93,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 | GET | `/api/scanner/screenshot?url=` | Server-rendered screenshot of a page |
 | GET | `/api/graph` | Knowledge-graph snapshot (nodes and relationships) for the `/graph` page |
 | POST | `/api/graph/feedback` | Mark a finding correct or a false alarm (the detector's reward signal) |
+| GET | `/api/graph/learning` | What the agent has learned and which findings still need a verdict, for the `/learning` page |
 | POST | `/api/agent/start` | Start an agent run (202, runs in the background) |
 | GET | `/api/agent/[id]` · `/api/agent/[id]/events` · `/api/agent/[id]/proof` | Session, event log, proof screenshot |
 | POST | `/api/agent/[id]/approve` · `/reject` · `/stop` | Human decisions |
