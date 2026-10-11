@@ -12,7 +12,9 @@ export const targetUrlSchema = z
   .string()
   .trim()
   .min(1)
-  .max(2048);
+  .max(2048)
+  // People type "netflix.com", not "https://netflix.com".
+  .transform((v) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`));
 
 export const startAgentSchema = z
   .object({

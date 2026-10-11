@@ -16,6 +16,14 @@ describe("startAgentSchema", () => {
     expect(body.goal).toBe("cancel_subscription");
   });
 
+  it("adds https:// when the URL is typed without a scheme", () => {
+    const parse = (targetUrl: string) =>
+      parseOrThrow(startAgentSchema, { goal: "detect_dark_patterns", targetUrl }).targetUrl;
+    expect(parse("audible.com/plans")).toBe("https://audible.com/plans");
+    expect(parse("http://localhost:3000/x")).toBe("http://localhost:3000/x");
+    expect(parse("file:///etc/passwd")).toBe("file:///etc/passwd"); // left for the SSRF check to reject
+  });
+
   it("rejects an unsupported goal", () => {
     expect(() =>
       parseOrThrow(startAgentSchema, { goal: "hack", targetUrl: "https://x.com" })

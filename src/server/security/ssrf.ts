@@ -5,6 +5,7 @@
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { ValidationError } from "@/server/security/errors";
 
 export const BLOCKED_PROTOCOLS = ["javascript:", "data:", "file:", "about:"] as const;
 export const BLOCKED_HOSTNAMES = ["localhost", "0.0.0.0"] as const;
@@ -68,18 +69,18 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
   try {
     url = new URL(raw.trim());
   } catch {
-    throw new Error("Invalid URL");
+    throw new ValidationError("Invalid URL");
   }
 
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error(`Protocol not allowed: ${url.protocol}`);
+    throw new ValidationError(`Protocol not allowed: ${url.protocol}`);
   }
   if (url.username || url.password) {
-    throw new Error("URL credentials are not allowed");
+    throw new ValidationError("URL credentials are not allowed");
   }
   if (isLoopbackHost(url.hostname)) {
     if (!devAllows()) {
-      throw new Error("Loopback hostnames are not allowed");
+      throw new ValidationError("Loopback hostnames are not allowed");
     }
     return url;
   }
@@ -87,7 +88,7 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
   const host = url.hostname.toLowerCase();
   if (isIP(host) !== 0 && isPrivateAddress(host)) {
     if (!devAllows()) {
-      throw new Error("Private IP addresses are not allowed");
+      throw new ValidationError("Private IP addresses are not allowed");
     }
     return url;
   }
@@ -98,7 +99,7 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
     for (const { address } of records) {
       if (isPrivateAddress(address)) {
         if (!devAllows()) {
-          throw new Error("Resolved address is not public");
+          throw new ValidationError("Resolved address is not public");
         }
       }
     }
@@ -117,8 +118,8 @@ export async function validateTargetUrl(raw: string): Promise<URL> {
 export function validateTargetUrlSync(raw: string): URL {
   const url = new URL(raw.trim());
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error(`Protocol not allowed: ${url.protocol}`);
+    throw new ValidationError(`Protocol not allowed: ${url.protocol}`);
   }
-  if (url.username || url.password) throw new Error("URL credentials are not allowed");
+  if (url.username || url.password) throw new ValidationError("URL credentials are not allowed");
   return url;
 }
