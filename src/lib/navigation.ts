@@ -7,6 +7,7 @@ import {
   History,
   ShieldCheck,
   Settings,
+  Network,
 } from "lucide-react";
 
 export interface NavItem {
@@ -25,6 +26,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/scanner", label: "Scan a page", icon: ScanSearch, description: "Analyze a webpage" },
       { href: "/tasks", label: "Cancellations", icon: ListChecks, description: "Manage cancellations" },
       { href: "/activity", label: "Activity", icon: History, description: "Audit log" },
+      { href: "/graph", label: "Knowledge graph", icon: Network, description: "What the agents remember" },
     ],
   },
   {

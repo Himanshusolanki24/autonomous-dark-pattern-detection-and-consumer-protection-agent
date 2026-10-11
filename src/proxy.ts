@@ -45,6 +45,7 @@ export const config = {
     "/scanner/:path*",
     "/cancellations/:path*",
     "/activity/:path*",
+    "/graph/:path*",
     "/settings/:path*",
   ],
 };
