@@ -9,6 +9,7 @@ import {
   Settings,
   Network,
   GraduationCap,
+  Gauge,
 } from "lucide-react";
 
 export interface NavItem {
@@ -29,6 +30,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/activity", label: "Activity", icon: History, description: "Audit log" },
       { href: "/graph", label: "Knowledge graph", icon: Network, description: "What the agents remember" },
       { href: "/learning", label: "Learning", icon: GraduationCap, description: "Teach the agent and see what it learned" },
+      { href: "/sites", label: "Site ranking", icon: Gauge, description: "Which sites are hardest to leave" },
     ],
   },
   {

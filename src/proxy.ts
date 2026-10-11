@@ -47,6 +47,7 @@ export const config = {
     "/activity/:path*",
     "/graph/:path*",
     "/learning/:path*",
+    "/sites/:path*",
     "/settings/:path*",
   ],
 };
