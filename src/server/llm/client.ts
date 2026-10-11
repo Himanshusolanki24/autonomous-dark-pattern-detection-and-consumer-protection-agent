@@ -60,19 +60,27 @@ export async function chat(opts: ChatOptions): Promise<string | null> {
 
 /**
  * Structured completion validated against a Zod schema. Returns null when no
- * LLM is configured or parsing fails (callers fall back to deterministic logic).
+ * LLM is configured, the request fails (e.g. a 429), or parsing fails — callers
+ * fall back to deterministic logic.
  */
 export async function chatStructured<T>(
   schema: z.ZodType<T>,
   opts: ChatOptions
 ): Promise<T | null> {
-  const text = await chat({
-    ...opts,
-    json: true,
-    // Headroom for reasoning models, whose thinking tokens count against the
-    // limit: at 1200 they regularly cut the JSON off mid-object.
-    maxTokens: opts.maxTokens ?? 4000,
-  });
+  let text: string | null;
+  try {
+    text = await chat({
+      ...opts,
+      json: true,
+      // Headroom for reasoning models, whose thinking tokens count against the
+      // limit: at 1200 they regularly cut the JSON off mid-object.
+      maxTokens: opts.maxTokens ?? 4000,
+    });
+  } catch (err) {
+    // The LLM is an enhancer: a rate limit or outage must not fail the scan.
+    console.warn("[llm] request failed, using deterministic logic:", (err as Error).message);
+    return null;
+  }
   if (!text) return null;
 
   const json = extractJson(text);
