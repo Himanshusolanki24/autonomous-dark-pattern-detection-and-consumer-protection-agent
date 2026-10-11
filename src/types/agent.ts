@@ -48,6 +48,8 @@ export interface DarkPatternDetection {
 export interface DetectionResult {
   detections: DarkPatternDetection[];
   overallRisk: Severity;
+  /** What the knowledge graph contributed (absent when the graph is off). */
+  graph?: { prior: number; related: string[] };
 }
 
 /** One step the agent may take. Only these tool types are executable. */

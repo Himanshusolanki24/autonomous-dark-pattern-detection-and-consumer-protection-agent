@@ -31,6 +31,10 @@ export const detectNode: NodeHandler = async (
   const result = await classifyPage(perception);
 
   const primary = result.detections[0];
+  const graphNote = result.graph
+    ? ` · knowledge graph: ${result.graph.prior} prior finding(s) on this site` +
+      (result.graph.related.length > 0 ? `, related: ${result.graph.related.join(", ")}` : "")
+    : "";
 
   if (result.detections.length > 0) {
     // Persist each confirmed detection (nullable session id for scanner-only runs).
@@ -56,8 +60,8 @@ export const detectNode: NodeHandler = async (
     eventType: "detection_completed",
     message:
       result.detections.length > 0
-        ? `Found ${result.detections.length} dark pattern(s)`
-        : "No dark patterns detected on this page",
+        ? `Found ${result.detections.length} dark pattern(s)${graphNote}`
+        : `No dark patterns detected on this page${graphNote}`,
     status: "running",
   });
 

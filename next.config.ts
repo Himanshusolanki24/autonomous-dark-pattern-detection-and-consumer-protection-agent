@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // Don't let next dev write AI assistant instruction files into the repo.
   agentRules: false,
   // Playwright drives a real browser for the agent; keep it out of the bundle.
-  serverExternalPackages: ["playwright"],
+  serverExternalPackages: ["playwright", "neo4j-driver"],
   // Pin the app root so Next does not walk up to the parent folder.
   turbopack: {
     root: __root,

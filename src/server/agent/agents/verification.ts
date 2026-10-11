@@ -8,6 +8,7 @@ import type { AgentState } from "../state";
 import type { NodeHandler, RuntimeContext } from "../graph";
 import { perceive } from "@/server/browser/perception";
 import { emitEvent } from "../events";
+import { recordOutcome } from "@/server/graph/neo4j";
 
 const SUCCESS_MARKERS = ["subscription is cancelled", "cancelled", "cancellation confirmed"];
 
@@ -32,6 +33,9 @@ export const verifyNode: NodeHandler = async (
   const text = perception.visibleText.toLowerCase();
 
   const confirmed = perception.pageState === "success" || SUCCESS_MARKERS.some((m) => text.includes(m));
+
+  // Graph memory: only runs verified against the page become "proven" paths.
+  await recordOutcome(state.sessionId, state.goal, perception.url, confirmed ? "verified" : "unverified");
 
   // Capture proof regardless so the user always has evidence to inspect.
   let proofPath: string | undefined;

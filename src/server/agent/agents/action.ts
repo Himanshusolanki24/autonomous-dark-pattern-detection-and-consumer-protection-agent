@@ -10,6 +10,7 @@ import { executeAction } from "@/server/browser/actions";
 import { emitEvent } from "../events";
 import { MAX_ACTIONS } from "@/types/agent";
 import type { AgentAction } from "@/types/agent";
+import { recordStep } from "@/server/graph/neo4j";
 
 export const actNode: NodeHandler = async (
   state: AgentState,
@@ -48,8 +49,13 @@ export const actNode: NodeHandler = async (
     status: "running",
   });
 
+  const urlBefore = browser.page.url();
   try {
     await executeAction(browser.page, actionToRun as AgentAction);
+    // Graph memory: remember clicks that really executed, and from which page.
+    if (actionToRun.type === "click" && actionToRun.target) {
+      await recordStep(state.sessionId, state.goal, urlBefore, nextCount, actionToRun.target);
+    }
   } catch (err) {
     // A single failed action retries up to once, then fails the run.
     if (state.actionCount === 0) {

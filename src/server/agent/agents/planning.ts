@@ -11,6 +11,7 @@ import { emitEvent } from "../events";
 import { chatStructured } from "@/server/llm/client";
 import { z } from "zod";
 import { MAX_ACTIONS } from "@/types/agent";
+import { learnedSteps } from "@/server/graph/neo4j";
 
 // Explicit cancellation affordances — clicking these leads to (or is) the
 // actual cancellation. Checked before anything else.
@@ -54,6 +55,7 @@ const PLAN_SYSTEM = [
   "Click the option that leads to cancellation: Cancel, Cancel subscription, Yes cancel, No thanks, No thanks, cancel.",
   "When the page clearly confirms cancellation success, respond complete.",
   "When stuck after repeated attempts, respond fail.",
+  "Graph memory lists clicks tried from this page before with a learned value from -1 (led to failure) to 1 (led to a verified outcome). Prefer high values, avoid negative ones.",
   "Reply only with JSON: {action, target, value, reason}.",
 ].join("\n");
 
@@ -128,10 +130,20 @@ export const planNode: NodeHandler = async (
     };
   }
 
+  // Reinforcement memory: the learned value of each click tried from this page
+  // (rewarded +1 when its run ended verified, -1 when it failed).
+  const learned = await learnedSteps(perception.url);
+  const valueOf = (el: (typeof elements)[number]) =>
+    learned.get(el.text.toLowerCase().replace(/\s+/g, " ").trim()) ?? 0;
+  /** Highest learned value wins; page order breaks ties, as before. */
+  const best = (candidates: typeof elements) => [...candidates].sort((a, b) => valueOf(b) - valueOf(a))[0];
+
   // 3) Explicit cancellation affordance — highest value, leads to the actual
   //    cancellation (never a retention trap).
-  const explicitEl = elements.find((el) =>
-    EXPLICIT_CANCEL.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m))
+  const explicitEl = best(
+    elements.filter((el) =>
+      EXPLICIT_CANCEL.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m))
+    )
   );
   if (explicitEl) {
     const label = `${explicitEl.text} ${explicitEl.ariaLabel ?? ""}`.toLowerCase();
@@ -153,10 +165,12 @@ export const planNode: NodeHandler = async (
 
   // 4) A generic cancel link to enter the cancellation flow. Retention traps
   //    are intentionally ignored here.
-  const cancelEl = elements.find(
-    (el) =>
-      CANCEL_NAV.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m)) &&
-      !RETENTION_TRAP.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m))
+  const cancelEl = best(
+    elements.filter(
+      (el) =>
+        CANCEL_NAV.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m)) &&
+        !RETENTION_TRAP.some((m) => `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(m))
+    )
   );
   if (cancelEl) {
     action = {
@@ -168,13 +182,34 @@ export const planNode: NodeHandler = async (
     return { currentStage: "planning", lastAction: action, lastDecision: decision };
   }
 
+  // 4b) Learned policy: a click that paid off from this exact page before.
+  //     Only used if it is on the page right now.
+  const provenEl = best(
+    elements.filter(
+      (el) => valueOf(el) >= 0.4 && !RETENTION_TRAP.some((m) => el.text.toLowerCase().includes(m))
+    )
+  );
+  if (provenEl) {
+    action = {
+      type: "click",
+      target: provenEl.text.slice(0, 100),
+      reason: `Learned: "${provenEl.text.slice(0, 60)}" led to a verified outcome here before (value ${valueOf(provenEl).toFixed(2)})`,
+    };
+    decision = `Following a learned step: "${provenEl.text.slice(0, 60)}"`;
+    return { currentStage: "planning", lastAction: action, lastDecision: decision };
+  }
+
   // 5) LLM refinement (optional).
   const llmPlan = await chatStructured(PLAN_SCHEMA, {
     system: PLAN_SYSTEM,
+    temperature: 0,
     user: [
       `Step ${actionCount + 1} on ${perception.url}`,
       `Title: ${perception.title}`,
       `Page state: ${perception.pageState}`,
+      `Graph memory (learned clicks from this page): ${
+        [...learned].map(([label, value]) => `"${label}" (${value.toFixed(2)})`).join(", ") || "none"
+      }`,
       `Visible text (truncated): ${perception.visibleText.slice(0, 2500)}`,
       `Elements: ${perception.elements
         .map((e) => `[${e.role}] "${e.text}"`)
@@ -186,7 +221,8 @@ export const planNode: NodeHandler = async (
     const matchingEl = elements.find(
       (el) =>
         `${el.text} ${el.ariaLabel ?? ""}`.toLowerCase().includes(llmPlan.target!.toLowerCase()) ||
-        llmPlan.target!.toLowerCase().includes(el.text.toLowerCase())
+        // Empty text would match any target and let an invented one through.
+        (el.text.trim().length > 2 && llmPlan.target!.toLowerCase().includes(el.text.toLowerCase()))
     );
     if (matchingEl) {
       action = {

@@ -16,7 +16,8 @@
     "db:reset": "supabase db reset",
     "db:types": "tsx scripts/generate-types.ts",
     "cleanup:proofs": "tsx scripts/cleanup-proofs.ts",
-    "smoke": "tsx scripts/smoke-agent.ts"
+    "smoke": "tsx scripts/smoke-agent.ts",
+    "graph:seed": "tsx scripts/seed-graph.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "^0.2.0",
@@ -31,6 +32,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",
     "lucide-react": "^1.31.0",
+    "neo4j-driver": "^6.2.0",
     "next": "16.3.1",
     "playwright": "1.62.1",
     "react": "19.2.8",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyPage, heuristicClassify } from "@/server/detection/classifier";
+import { applyLearning, classifyPage, heuristicClassify, isGrounded } from "@/server/detection/classifier";
 import { overallRisk } from "@/server/detection/taxonomy";
 import type { PerceptionResult } from "@/types/agent";
 
@@ -70,5 +70,51 @@ describe("classifyPage (deterministic path, no LLM)", () => {
     );
     expect(result.overallRisk).toBe("high");
     expect(result.detections.length).toBeGreaterThan(0);
+  });
+});
+
+describe("isGrounded (LLM hallucination gate)", () => {
+  const page = perception({
+    visibleText: "Only 2 seats  left!\nOffer ends tonight.",
+    elements: [{ role: "button", text: "No thanks, I hate saving money", tagName: "button", visible: true, box: { x: 0, y: 0, width: 10, height: 10 } }],
+  });
+
+  it("keeps findings quoted verbatim from text or elements", () => {
+    expect(isGrounded("only 2 seats left!", page)).toBe(true);
+    expect(isGrounded("I hate saving money", page)).toBe(true);
+  });
+
+  it("drops findings whose evidence is not on the page", () => {
+    expect(isGrounded("A hidden $9.99 fee is added at checkout", page)).toBe(false);
+    expect(isGrounded("", page)).toBe(false);
+  });
+});
+
+describe("applyLearning (reinforcement from human feedback)", () => {
+  const page = perception({ visibleText: "Renews automatically. Members also get early access deals." });
+  const found = heuristicClassify(page);
+
+  it("drops a finding whose evidence was marked a false alarm", () => {
+    expect(found.some((d) => d.patternType === "forced_continuity")).toBe(true);
+    const out = applyLearning(found, [{ phrase: "renews automatically", patternType: "forced_continuity", value: -0.5 }], page);
+    expect(out.some((d) => d.patternType === "forced_continuity")).toBe(false);
+  });
+
+  it("flags a confirmed phrase the heuristics do not know, only when it is on the page", () => {
+    const learned = [
+      { phrase: "early access deals", patternType: "nagging" as const, value: 0.75 },
+      { phrase: "not on this page", patternType: "misdirection" as const, value: 1 },
+    ];
+    const out = applyLearning(found, learned, page);
+    expect(out.find((d) => d.patternType === "nagging")?.elementText).toBe("early access deals");
+    expect(out.some((d) => d.patternType === "misdirection")).toBe(false);
+  });
+
+  it("ignores values too weak to act on", () => {
+    const weak = [
+      { phrase: "renews automatically", patternType: "forced_continuity" as const, value: -0.2 },
+      { phrase: "early access deals", patternType: "nagging" as const, value: 0.2 },
+    ];
+    expect(applyLearning(found, weak, page)).toEqual(found);
   });
 });

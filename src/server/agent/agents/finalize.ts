@@ -7,6 +7,7 @@
 import type { AgentState } from "../state";
 import type { NodeHandler, RuntimeContext } from "../graph";
 import { emitEvent } from "../events";
+import { recordOutcome } from "@/server/graph/neo4j";
 
 export const completeNode: NodeHandler = async (
   state: AgentState,
@@ -27,6 +28,13 @@ export const failNode: NodeHandler = async (
   ctx: RuntimeContext
 ): Promise<Partial<AgentState>> => {
   const message = state.errorMessage ?? "Task failed";
+  // A human declining the final step is not evidence the clicks were wrong.
+  await recordOutcome(
+    state.sessionId,
+    state.goal,
+    state.lastUrl ?? state.targetUrl,
+    state.resumeApproval === "rejected" ? "stopped" : "failed"
+  );
   await emitEvent(ctx.supabase, state.sessionId, {
     userId: state.userId,
     agent: "planning",
