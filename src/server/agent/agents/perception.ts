@@ -9,6 +9,7 @@ import type { NodeHandler, RuntimeContext } from "../graph";
 import { perceive } from "@/server/browser/perception";
 import { emitEvent } from "../events";
 import { MAX_ACTIONS } from "@/types/agent";
+import { browserManager } from "@/server/browser/manager";
 
 export const perceiveNode: NodeHandler = async (
   state: AgentState,
@@ -53,6 +54,8 @@ export const perceiveNode: NodeHandler = async (
   }
 
   const result = await perceive(page);
+  // Hand the preview a picture of the page we already have open.
+  await browserManager.captureShot(page, result.url, ...(firstVisit ? [state.targetUrl] : []));
 
   await emitEvent(ctx.supabase, state.sessionId, {
     userId: state.userId,

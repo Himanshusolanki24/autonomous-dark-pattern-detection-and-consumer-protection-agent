@@ -14,6 +14,9 @@ export interface BrowserSessionHandle {
   page: Page;
 }
 
+/** How long a preview screenshot is reused. */
+const SHOT_TTL_MS = 60_000;
+
 interface BrowserManagerOptions {
   launch?: () => Promise<Browser>;
   sessionTimeoutMs?: number;
@@ -29,6 +32,8 @@ class BrowserManager {
   private readonly opts: Required<Omit<BrowserManagerOptions, "launch">>;
   private readonly launcher: () => Promise<Browser>;
   private launching: Promise<Browser> | null = null;
+  private shots = new Map<string, { at: number; shot: Promise<Buffer> }>();
+  private waiting = new Map<string, (shot: Buffer) => void>();
 
   constructor(options: BrowserManagerOptions = {}) {
     this.launcher =
@@ -96,8 +101,52 @@ class BrowserManager {
   /**
    * One-off screenshot of a URL in a throwaway context. Used by the live page
    * preview so sites that block iframe embedding (X-Frame-Options) still render.
+   * Recent shots are reused: the preview asks for the same URL several times.
    */
-  async screenshot(url: string): Promise<Buffer> {
+  screenshot(url: string): Promise<Buffer> {
+    const hit = this.shots.get(url);
+    if (hit && Date.now() - hit.at < SHOT_TTL_MS) return hit.shot;
+    // Whichever comes first wins: our own render, or a shot from an agent or
+    // scanner session that is loading this same page right now (captureShot).
+    const fromSession = new Promise<Buffer>((resolve) => this.waiting.set(url, resolve));
+    // Caching the promise also shares one render between simultaneous requests.
+    const shot = Promise.race([fromSession, this.renderShot(url)]);
+    this.shots.set(url, { at: Date.now(), shot });
+    const settled = () => this.waiting.delete(url);
+    shot.then(settled, () => {
+      settled();
+      this.shots.delete(url);
+    });
+    // ponytail: tiny in-memory cache, oldest out. Use a real cache if previews go multi-instance.
+    if (this.shots.size > 30) this.shots.delete(this.shots.keys().next().value!);
+    return shot;
+  }
+
+  /**
+   * Screenshot a page a session already has open and file it under the given
+   * URLs, so the preview shows it without loading the site a second time.
+   */
+  async captureShot(page: Page, ...urls: string[]): Promise<void> {
+    try {
+      // Bounded wait for images and styles; the session's own work comes first.
+      await page.waitForLoadState("load", { timeout: 1_200 }).catch(() => {});
+      const buf = await page.screenshot({ type: "jpeg", quality: 72 });
+      for (const raw of new Set(urls)) {
+        let url: string;
+        try {
+          url = new URL(raw).toString();
+        } catch {
+          continue;
+        }
+        this.waiting.get(url)?.(buf);
+        this.shots.set(url, { at: Date.now(), shot: Promise.resolve(buf) });
+      }
+    } catch {
+      // A preview is a nicety — never fail a run or a scan over it.
+    }
+  }
+
+  private async renderShot(url: string): Promise<Buffer> {
     const browser = await this.getBrowser();
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
@@ -107,19 +156,21 @@ class BrowserManager {
     try {
       const page = await context.newPage();
       page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
+      // Video and audio are never visible in a still image; skip downloading them.
+      await page.route("**/*", (route) =>
+        route.request().resourceType() === "media" ? route.abort() : route.continue()
+      );
       try {
-        await page.goto(url, { waitUntil: "load", timeout: 20_000 });
+        // Don't wait for every ad and tracker ("load"): the DOM is enough to start.
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10_000 });
       } catch {
         // Render whatever loaded even if the navigation didn't fully settle.
       }
-      // Let SPA content hydrate, then settle network (lazy images, fonts).
-      await page.waitForTimeout(2000);
-      try {
-        await page.waitForLoadState("networkidle", { timeout: 6_000 });
-      } catch {
-        // networkidle can never fire on sites with long-poll/analytics — fine.
-      }
-      return await page.screenshot({ type: "png", fullPage: true });
+      // Give styles, images and client rendering a short, bounded window.
+      await page.waitForLoadState("load", { timeout: 2_500 }).catch(() => {});
+      await page.waitForTimeout(400);
+      // The first screen as JPEG: far smaller and faster than a full-page PNG.
+      return await page.screenshot({ type: "jpeg", quality: 72 });
     } finally {
       await context.close().catch(() => {});
     }

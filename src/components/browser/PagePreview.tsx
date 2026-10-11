@@ -49,7 +49,7 @@ export function LiveShot({ url, isScanning }: { url: string; isScanning?: boolea
         />
       )}
       <p className="border-t border-zinc-100 px-3 py-1.5 text-[10px] text-zinc-400">
-        Live server-rendered snapshot of the target page.
+        Server-rendered snapshot of the top of the target page.
       </p>
     </div>
   );

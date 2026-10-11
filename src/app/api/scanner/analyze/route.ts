@@ -32,6 +32,8 @@ export const POST = api(async (req: Request) => {
     await browser.page.waitForTimeout(1200);
 
     const perception = await perceive(browser.page);
+    // Hand the preview a picture of the page we already have open.
+    await browserManager.captureShot(browser.page, perception.url, url.toString());
     const result = await classifyPage(perception);
 
     // Persist read-only detections (nullable session_id) for the dashboard.

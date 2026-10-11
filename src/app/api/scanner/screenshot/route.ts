@@ -1,6 +1,6 @@
 // =============================================================================
 // app/api/scanner/screenshot/route.ts
-// GET ?url= — renders a URL server-side (Playwright) and returns a PNG. Used by
+// GET ?url= — renders a URL server-side (Playwright) and returns a JPEG. Used by
 // the live page preview so sites that block iframe embedding still show.
 // =============================================================================
 
@@ -22,13 +22,13 @@ export const GET = api(async (req: Request) => {
   if (!raw) throw new Error("Missing url");
   const url = await validateTargetUrl(raw);
 
-  const png = await browserManager.screenshot(url.toString());
+  const shot = await browserManager.screenshot(url.toString());
 
-  return new NextResponse(new Uint8Array(png), {
+  return new NextResponse(new Uint8Array(shot), {
     status: 200,
     headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "private, max-age=30",
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "private, max-age=60",
     },
   });
 });
