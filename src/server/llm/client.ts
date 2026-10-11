@@ -13,6 +13,8 @@ interface ChatOptions {
   user: string;
   temperature?: number;
   maxTokens?: number;
+  /** Ask the provider for syntactically valid JSON (OpenAI-compatible JSON mode). */
+  json?: boolean;
 }
 
 function config() {
@@ -38,6 +40,7 @@ export async function chat(opts: ChatOptions): Promise<string | null> {
       model: cfg.model,
       temperature: opts.temperature ?? 0.2,
       max_tokens: opts.maxTokens ?? 800,
+      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: opts.system },
         { role: "user", content: opts.user },
@@ -65,7 +68,10 @@ export async function chatStructured<T>(
 ): Promise<T | null> {
   const text = await chat({
     ...opts,
-    maxTokens: opts.maxTokens ?? 1200,
+    json: true,
+    // Headroom for reasoning models, whose thinking tokens count against the
+    // limit: at 1200 they regularly cut the JSON off mid-object.
+    maxTokens: opts.maxTokens ?? 4000,
   });
   if (!text) return null;
 
