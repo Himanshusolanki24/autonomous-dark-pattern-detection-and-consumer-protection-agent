@@ -49,11 +49,15 @@ class BrowserManager {
   private async getBrowser(): Promise<Browser> {
     if (this.browser) return this.browser;
     if (!this.launching) {
-      this.launching = this.launcher().then((b) => {
-        this.browser = b;
-        this.launching = null;
-        return b;
-      });
+      this.launching = this.launcher()
+        .then((b) => {
+          this.browser = b;
+          return b;
+        })
+        // Also clear on failure, or one failed launch poisons every later run.
+        .finally(() => {
+          this.launching = null;
+        });
     }
     return this.launching;
   }
