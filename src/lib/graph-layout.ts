@@ -12,7 +12,9 @@ export function forceLayout(
   links: { source: string; target: string }[],
   width: number,
   height: number,
-  iterations = 300
+  iterations = 300,
+  /** Drawn radius of a node, so the layout can keep circles from overlapping. */
+  radius: (id: string) => number = () => 9
 ): Map<string, Point> {
   const n = ids.length;
   const pos = new Map<string, Point>();
@@ -71,7 +73,7 @@ export function forceLayout(
       const d = disp.get(id)!;
       // Gravity holds the graph together. Unlinked nodes have no edge pulling
       // them in, so they get more of it or they pile up against the borders.
-      const g = linked.has(id) ? 0.25 : 1.5;
+      const g = linked.has(id) ? 0.9 : 1.5;
       d.x += (cx - p.x) * g;
       d.y += (cy - p.y) * g;
       const len = Math.max(0.01, Math.hypot(d.x, d.y));
@@ -89,6 +91,35 @@ export function forceLayout(
   for (const p of pos.values()) {
     p.x = maxX > minX ? pad + ((p.x - minX) / (maxX - minX)) * (width - 2 * pad) : cx;
     p.y = maxY > minY ? pad + ((p.y - minY) / (maxY - minY)) * (height - 2 * pad) : cy;
+  }
+
+  // Forces alone let a busy hub's neighbours pile on top of it. Push apart any
+  // two circles that still touch, a little each round, until none do.
+  const gap = 6;
+  for (let round = 0; round < 80; round++) {
+    let moved = false;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = pos.get(ids[i])!;
+        const b = pos.get(ids[j])!;
+        const dx = a.x - b.x || 0.01 * (i - j);
+        const dy = a.y - b.y || 0.01;
+        const dist = Math.hypot(dx, dy);
+        const min = radius(ids[i]) + radius(ids[j]) + gap;
+        if (dist >= min) continue;
+        const push = (min - dist) / 2 / dist;
+        a.x += dx * push;
+        a.y += dy * push;
+        b.x -= dx * push;
+        b.y -= dy * push;
+        moved = true;
+      }
+    }
+    for (const p of pos.values()) {
+      p.x = Math.min(width - pad, Math.max(pad, p.x));
+      p.y = Math.min(height - pad, Math.max(pad, p.y));
+    }
+    if (!moved) break;
   }
   return pos;
 }

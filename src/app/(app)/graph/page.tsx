@@ -155,7 +155,7 @@ export default function GraphPage() {
   }, []);
   useEffect(load, [load]);
 
-  const { nodes, links, pos, byId, degree, counts } = useMemo(() => {
+  const { nodes, links, pos, byId, radius, counts } = useMemo(() => {
     const all = data?.nodes ?? [];
     const counts = new Map<string, number>();
     for (const n of all) counts.set(n.label, (counts.get(n.label) ?? 0) + 1);
@@ -167,7 +167,8 @@ export default function GraphPage() {
       degree.set(l.source, (degree.get(l.source) ?? 0) + 1);
       degree.set(l.target, (degree.get(l.target) ?? 0) + 1);
     }
-    return { nodes, links, byId, degree, counts, pos: forceLayout(nodes.map((n) => n.id), links, W, H) };
+    const radius = (id: string) => 7 + Math.min(11, Math.sqrt(degree.get(id) ?? 0) * 3);
+    return { nodes, links, byId, radius, counts, pos: forceLayout(nodes.map((n) => n.id), links, W, H, 300, radius) };
   }, [data, hidden]);
 
   const active = hovered ?? selected;
@@ -183,7 +184,6 @@ export default function GraphPage() {
   }, [active, links]);
 
   const selectedNode = selected ? byId.get(selected) : undefined;
-  const radius = useCallback((id: string) => 7 + Math.min(11, Math.sqrt(degree.get(id) ?? 0) * 3), [degree]);
 
   // Place labels one at a time, most important first, and never on top of a
   // node or another label. A label with no free spot is left out — its text is
