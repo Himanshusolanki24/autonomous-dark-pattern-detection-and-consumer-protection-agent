@@ -171,19 +171,5 @@ function applyMode(data: Row[], mode: string, error: unknown) {
 export function createDevClient(): unknown {
   return {
     from: (table: string) => new Builder(table),
-    auth: {
-      async getUser() {
-        return {
-          data: { user: { id: DEV_USER_ID, email: DEV_USER_EMAIL } },
-          error: null,
-        };
-      },
-      async signOut() {
-        return { error: null };
-      },
-      async exchangeCodeForSession() {
-        return { error: new Error("Dev mode: Supabase OAuth is not configured") };
-      },
-    },
   };
 }

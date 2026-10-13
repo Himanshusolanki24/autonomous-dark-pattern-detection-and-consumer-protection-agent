@@ -28,7 +28,6 @@ src/
     (app)/                the app: dashboard, scanner, agent, tasks, activity, security, settings, demo
     api/                  REST API (scanner, agent sessions, approvals, cancellations, activity, profile, health)
     demo-target/          StreamVault test site with planted dark patterns
-    auth/callback/        Supabase OAuth callback
   components/             UI (layout shell, agent, browser preview, shared ui)
   lib/                    client-side helpers: API client, services, types, constants
   stores/                 Zustand store for the live agent session
@@ -40,11 +39,11 @@ src/
     security/             SSRF guard, rate limiting, idempotency, errors
     supabase/  db/  auth/  queue/  api/
   types/                  shared server types (agent, API, database)
-  proxy.ts                Next.js proxy: session refresh + CORS
+  proxy.ts                Next.js proxy: CORS
 supabase/                 migrations, seed, local config
 tests/                    Vitest suites
 scripts/                  smoke run, type generation, proof cleanup
-docs/setup/               Supabase, Google auth, deployment guides
+docs/setup/               Supabase and deployment guides
 video/                    Remotion pitch video (separate package)
 ```
 
@@ -55,7 +54,7 @@ video/                    Remotion pitch video (separate package)
 | App | Next.js 16 (App Router), React 19, TypeScript |
 | UI | Tailwind CSS v4, Framer Motion, Radix UI, Zustand |
 | Agent | LangGraph JS, Playwright (headless Chromium), optional OpenAI-compatible LLM |
-| Data | Supabase (Postgres + RLS, Google OAuth) or the in-memory dev store |
+| Data | In-memory store with a single demo user (no sign-in) |
 | Tests | Vitest |
 
 ## Scripts
@@ -78,8 +77,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 
 | Variable | Notes |
 | -------- | ----- |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Real Supabase auth and persistence |
-| `SUPABASE_DEV_MODE` | Defaults to on (in-memory store and a demo user). Set `"false"` in production: this also turns on SSRF blocking of private and loopback addresses. |
+| `SUPABASE_DEV_MODE` | Set `"false"` to turn on SSRF blocking of private and loopback addresses. Always on when deployed to Vercel. |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Optional LLM fallback for planning and classification, e.g. `https://api.mistral.ai/v1` with `mistral-large-latest` |
 | `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` | Optional Neo4j knowledge graph and agent memory. Detection reads prior findings, co-occurring patterns and example phrases; planning reuses clicks from verified runs; action and verification write back. LLM findings are kept only if their evidence quote appears verbatim on the page. Run `npm run graph:seed` once. It also keeps a path map of each cancellation flow (pages linked by the clicks between them), which the planner uses to follow the shortest known route and to ask for approval before the click that lands on the cancelled page. The graph also holds what the agent learns from rewards: clicks are rewarded when a run is verified, and findings are rewarded by the "Is this really a dark pattern?" buttons in the scanner. |
 | `PROOFS_DIR` | Where proof screenshots are written (default `.proofs/`) |
@@ -100,7 +98,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 | POST | `/api/agent/[id]/approve` · `/reject` · `/stop` | Human decisions |
 | GET/POST | `/api/cancellations` · `/api/cancellations/[id]` · `/[id]/stop` | Cancellation tasks |
 | GET | `/api/activity` | Paginated activity feed |
-| GET/PATCH | `/api/profile` · GET `/api/auth/me` · POST `/api/auth/signout` | Account |
+| GET/PATCH | `/api/profile` | Profile |
 | GET | `/api/health` | Health check |
 
 ## Safety model
@@ -108,7 +106,7 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 - **Human in the loop:** the final irreversible action is parked until you approve it; reject and the run stops.
 - **Safe actions only:** the agent can click, type, scroll and wait. Page text is treated as data, never as instructions.
 - **Stop anytime:** each pipeline step checks whether the session was stopped before it runs.
-- **SSRF guard, rate limits, idempotency keys:** in `src/server/security/`. SSRF blocking of private addresses applies when `SUPABASE_DEV_MODE=false`.
+- **SSRF guard, rate limits, idempotency keys:** in `src/server/security/`. SSRF blocking of private addresses applies when `SUPABASE_DEV_MODE=false` or on Vercel.
 
 ## Deployment
 

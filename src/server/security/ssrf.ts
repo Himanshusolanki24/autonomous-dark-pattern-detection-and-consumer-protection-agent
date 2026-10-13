@@ -45,7 +45,7 @@ export function isPrivateAddress(ip: string): boolean {
 
 /** Dev-only affordance: allow loopback targets for the self-hosted demo site. */
 function devAllows(): boolean {
-  return process.env.SUPABASE_DEV_MODE !== "false";
+  return process.env.SUPABASE_DEV_MODE !== "false" && !process.env.VERCEL;
 }
 
 function isLoopbackHost(hostname: string): boolean {

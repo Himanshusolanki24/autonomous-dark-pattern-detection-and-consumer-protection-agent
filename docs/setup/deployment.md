@@ -1,7 +1,7 @@
 # Deployment
 
 The backend is a Next.js (App Router) server that runs the agent worker in-process
-and talks to Supabase for auth/data/storage.
+and keeps its data in an in-memory store. There is no sign-in.
 
 ## Environments
 
@@ -17,10 +17,6 @@ health check) resolve correctly.
 
 See `.env.example`. Required:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; do not prefix with `NEXT_PUBLIC_`)
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `NEXT_PUBLIC_APP_URL`
 
 Optional:
@@ -57,8 +53,6 @@ always resumable from any instance.
 ## Production checklist
 
 - [ ] Migrations applied (`supabase/migrations/`) and `types/database.ts` in sync
-- [ ] Google OAuth configured + redirect URIs correct
-- [ ] Service-role key stored server-side only
 - [ ] `npx playwright install chromium` run on the deploy target
 - [ ] Rate-limit buckets are in-memory (per instance) — fine for MVP
 - [ ] Proof retention job scheduled (`scripts/cleanup-proofs.ts` or Supabase cron)

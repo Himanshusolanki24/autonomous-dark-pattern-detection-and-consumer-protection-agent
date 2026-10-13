@@ -5,7 +5,6 @@
 // =============================================================================
 
 import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/server/supabase/proxy";
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
@@ -34,20 +33,9 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  return applyCors(request, await updateSession(request));
+  return applyCors(request, NextResponse.next());
 }
 
 export const config = {
-  matcher: [
-    "/api/:path*",
-    "/dashboard/:path*",
-    "/agent/:path*",
-    "/scanner/:path*",
-    "/cancellations/:path*",
-    "/activity/:path*",
-    "/graph/:path*",
-    "/learning/:path*",
-    "/sites/:path*",
-    "/settings/:path*",
-  ],
+  matcher: ["/api/:path*"],
 };
