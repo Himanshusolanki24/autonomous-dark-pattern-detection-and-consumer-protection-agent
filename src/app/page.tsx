@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Shield } from "lucide-react";
+import { ArrowRight, Check, Minus, Shield, X } from "lucide-react";
 import { HeroCase } from "@/components/landing/HeroCase";
 import { Marker } from "@/components/ui/case";
 
@@ -30,6 +30,63 @@ const PROMISES = [
   { title: "You can stop it at any moment", body: "Every step is checked against your stop button before it runs, and every step is logged." },
 ];
 
+// How TrapKiller differs from the usual ways people deal with subscriptions.
+// "Other" columns describe typical tools in general, not any one product.
+type Mark = "yes" | "no" | "partly";
+const COMPARE_COLUMNS = ["Doing it yourself", "Subscription tracker apps", "Asking an AI chatbot"];
+const COMPARE: { feature: string; others: [Mark, string][]; ours: string }[] = [
+  {
+    feature: "Spots dark patterns on the page",
+    others: [["no", "You have to notice them"], ["no", "Tracks bills, not pages"], ["partly", "Only if you paste the page in"]],
+    ours: "Checks every page against 13 known tricks",
+  },
+  {
+    feature: "Proves each finding with the exact words",
+    others: [["no", "No record"], ["no", "No"], ["no", "Can make things up"]],
+    ours: "No quote from the page, no finding",
+  },
+  {
+    feature: "Walks the cancel steps for you",
+    others: [["no", "Every click is yours"], ["partly", "Some do, often by request"], ["no", "It can only advise"]],
+    ours: "An agent works through the flow in a real browser",
+  },
+  {
+    feature: "Asks before the irreversible click",
+    others: [["partly", "You decide, with no warning"], ["partly", "Varies"], ["no", "Does not act"]],
+    ours: "Always stops for your approval",
+  },
+  {
+    feature: "Remembers sites and learns from you",
+    others: [["no", "No"], ["no", "No"], ["no", "Forgets after the chat"]],
+    ours: "A knowledge graph of sites, tricks and routes",
+  },
+  {
+    feature: "Scores how hard a site is to leave",
+    others: [["no", "No"], ["no", "No"], ["no", "No"]],
+    ours: "A trap score from 0 to 100",
+  },
+  {
+    feature: "Keeps proof of what happened",
+    others: [["partly", "If you take screenshots"], ["partly", "Varies"], ["no", "No"]],
+    ours: "Step-by-step log and a proof screenshot",
+  },
+];
+
+function MarkIcon({ mark }: { mark: Mark }) {
+  const Icon = mark === "yes" ? Check : mark === "no" ? X : Minus;
+  return (
+    <span
+      className={
+        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full " +
+        (mark === "yes" ? "bg-foreground text-marker" : mark === "no" ? "bg-zinc-100 text-zinc-500" : "bg-warning-soft text-amber-800")
+      }
+    >
+      <Icon className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+      <span className="sr-only">{mark === "yes" ? "Yes:" : mark === "no" ? "No:" : "Partly:"}</span>
+    </span>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="bg-background">
@@ -43,6 +100,7 @@ export default function LandingPage() {
         <nav className="hidden items-center gap-7 text-[14px] text-zinc-600 md:flex" aria-label="Sections">
           <a href="#how" className="hover:text-foreground">How it works</a>
           <a href="#catches" className="hover:text-foreground">What it catches</a>
+          <a href="#compare" className="hover:text-foreground">Why TrapKiller</a>
           <a href="#safety" className="hover:text-foreground">Safety</a>
         </nav>
         <Link
@@ -129,6 +187,90 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
+        </section>
+
+        {/* Comparison */}
+        <section id="compare" className="mx-auto max-w-[1180px] scroll-mt-8 px-5 pt-24 sm:px-8">
+          <h2 className="max-w-2xl text-[34px] font-bold leading-tight sm:text-[40px]">
+            What you get here that you <Marker delay={0.2}>don&rsquo;t get elsewhere</Marker>
+          </h2>
+          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-zinc-600">
+            Most tools either track what you pay or give advice. TrapKiller finds the trick, shows the proof, and does
+            the work with you in control.
+          </p>
+          {/* Phones get one card per row, so the TrapKiller answer is never scrolled out of view. */}
+          <ul className="mt-8 space-y-3 md:hidden">
+            {COMPARE.map((row) => (
+              <li key={row.feature} className="overflow-hidden rounded-2xl border border-border bg-surface">
+                <h3 className="px-4 pt-4 text-[16px] font-bold leading-snug">{row.feature}</h3>
+                <p className="mx-4 mt-3 flex gap-2 rounded-xl bg-brand-soft px-3 py-2.5 text-[14px] font-medium leading-5">
+                  <MarkIcon mark="yes" />
+                  <span>
+                    <span className="block text-[11px] font-semibold text-zinc-500">TrapKiller</span>
+                    {row.ours}
+                  </span>
+                </p>
+                <dl className="space-y-2 px-4 pb-4 pt-3">
+                  {row.others.map(([mark, note], i) => (
+                    <div key={i} className="flex gap-2 text-[13.5px] leading-5 text-zinc-600">
+                      <MarkIcon mark={mark} />
+                      <span>
+                        <dt className="text-[11px] font-semibold text-zinc-500">{COMPARE_COLUMNS[i]}</dt>
+                        <dd>{note}</dd>
+                      </span>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10 hidden overflow-hidden rounded-2xl border border-border bg-surface md:block">
+            <table className="w-full border-collapse text-left text-[14px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th scope="col" className="w-[24%] px-5 py-4 text-[13px] font-medium text-zinc-500">
+                    What matters
+                  </th>
+                  {COMPARE_COLUMNS.map((c) => (
+                    <th key={c} scope="col" className="w-[18%] px-4 py-4 text-[13px] font-semibold text-zinc-700">
+                      {c}
+                    </th>
+                  ))}
+                  <th scope="col" className="bg-foreground px-5 py-4 font-display text-[16px] font-bold text-white">
+                    TrapKiller
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE.map((row) => (
+                  <tr key={row.feature} className="border-b border-border last:border-b-0">
+                    <th scope="row" className="px-5 py-4 align-top text-[15px] font-semibold text-foreground">
+                      {row.feature}
+                    </th>
+                    {row.others.map(([mark, note], i) => (
+                      <td key={i} className="px-4 py-4 align-top">
+                        <span className="flex gap-2 leading-5 text-zinc-600">
+                          <MarkIcon mark={mark} />
+                          {note}
+                        </span>
+                      </td>
+                    ))}
+                    <td className="bg-brand-soft px-5 py-4 align-top">
+                      <span className="flex gap-2 font-medium leading-5 text-foreground">
+                        <MarkIcon mark="yes" />
+                        {row.ours}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 max-w-3xl text-[12.5px] leading-5 text-zinc-500">
+            The other columns describe typical tools in general, not any one product. Today TrapKiller&rsquo;s full
+            cancellation runs on its built-in demo site; on real sites it scans public pages.
+          </p>
         </section>
 
         {/* Safety */}
