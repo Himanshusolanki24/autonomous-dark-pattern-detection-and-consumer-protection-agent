@@ -25,9 +25,13 @@ const nextConfig: NextConfig = {
     root: __root,
   },
   outputFileTracingRoot: __root,
-  // The serverless Chromium is unpacked from these at runtime, so the tracer can't see them.
+  // Loaded through runtime paths the tracer can't follow: the serverless Chromium
+  // binaries, and Playwright's own files (browsers.json and lazily required lib/).
   outputFileTracingIncludes: {
-    "/api/**": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/**": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/**",
+    ],
   },
 };
 

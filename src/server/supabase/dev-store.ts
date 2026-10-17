@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { randomUUID } from "node:crypto";
+import { run } from "@/server/graph/neo4j";
 
 type Row = Record<string, unknown>;
 type Filter = { op: "eq" | "in" | "lt" | "gte"; col: string; value: unknown };
@@ -19,6 +20,32 @@ const tables = new Map<string, Row[]>();
 function rows(table: string): Row[] {
   if (!tables.has(table)) tables.set(table, []);
   return tables.get(table)!;
+}
+
+// On Vercel each request can land on a different instance, so memory is not
+// shared: a session started on one is "not found" on the next. There the rows
+// live in the Neo4j database the knowledge graph already uses, as JSON.
+// ponytail: each query loads the whole table and filters here; fine at demo
+// scale, move to Postgres when tables grow. If Neo4j is down, reads fall back
+// to this instance's memory.
+const shared = () => Boolean(process.env.VERCEL && process.env.NEO4J_URI);
+
+async function loadShared(table: string): Promise<Row[] | null> {
+  const res = await run<{ json: string }>(
+    "store load",
+    "MATCH (r:StoreRow {table: $table}) RETURN r.json AS json",
+    { table }
+  );
+  return res?.map((r) => JSON.parse(r.json) as Row) ?? null;
+}
+
+async function saveShared(table: string, changed: Row[]): Promise<boolean> {
+  const res = await run(
+    "store save",
+    "UNWIND $rows AS row MERGE (r:StoreRow {table: $table, id: row.id}) SET r.json = row.json",
+    { table, rows: changed.map((r) => ({ id: r.id, json: JSON.stringify(r) })) }
+  );
+  return res !== null;
 }
 
 class Builder {
@@ -113,8 +140,10 @@ class Builder {
     });
   }
 
-  private finalize(mode: "single" | "maybeSingle" | "list") {
-    const error: unknown = null;
+  private async finalize(mode: "single" | "maybeSingle" | "list") {
+    let error: unknown = null;
+    const remote = shared() ? await loadShared(this.table) : null;
+    const all = remote ?? rows(this.table);
 
     if (this.insertValue) {
       const inserted = (Array.isArray(this.insertValue)
@@ -127,23 +156,27 @@ class Builder {
         rows(this.table).push(row);
         return row;
       });
+      if (remote && !(await saveShared(this.table, inserted))) error = new Error("store write failed");
       const projected = this.project(inserted);
       return applyMode(projected, mode, error);
     }
 
     if (this.updateValue) {
-      const updated = rows(this.table)
+      const updated = all
         .filter((r) => this.matches(r))
         .map((r) => {
           const next = { ...r, ...this.updateValue! };
           if (!next.updated_at) next.updated_at = new Date().toISOString();
           return next;
         });
-      for (const r of updated) Object.assign(rows(this.table).find((x) => x.id === r.id)!, r);
+      for (const r of updated) Object.assign(all.find((x) => x.id === r.id)!, r);
+      if (remote && updated.length && !(await saveShared(this.table, updated))) {
+        error = new Error("store write failed");
+      }
       return applyMode(this.project(updated), mode, error);
     }
 
-    let out = rows(this.table).filter((r) => this.matches(r));
+    let out = all.filter((r) => this.matches(r));
     for (const o of this.orders) {
       out = [...out].sort((a, b) => {
         const va = a[o.col] as string;

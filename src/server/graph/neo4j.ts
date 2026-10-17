@@ -43,7 +43,7 @@ function getDriver(): Driver | null {
 }
 
 /** Run one Cypher statement; returns null when the graph is off or failing. */
-async function run<T = Record<string, unknown>>(
+export async function run<T = Record<string, unknown>>(
   op: string,
   cypher: string,
   params: Record<string, unknown>
@@ -379,7 +379,8 @@ export async function graphSnapshot(): Promise<GraphSnapshot> {
   const [nodes, links] = await Promise.all([
     run<GraphSnapshot["nodes"][number]>(
       "snapshot nodes",
-      `MATCH (n) RETURN elementId(n) AS id, labels(n)[0] AS label, properties(n) AS props LIMIT 400`,
+      // StoreRow nodes are the app's data store (supabase/dev-store.ts), not graph memory.
+      `MATCH (n) WHERE NOT n:StoreRow RETURN elementId(n) AS id, labels(n)[0] AS label, properties(n) AS props LIMIT 400`,
       {}
     ),
     run<GraphSnapshot["links"][number]>(
