@@ -34,7 +34,7 @@ src/
   server/                 server-only code
     agent/                LangGraph pipeline: perceive → detect → plan → act → approval → verify
     browser/              Playwright session manager, perception, safe actions
-    detection/            dark-pattern classifier and taxonomy
+    detection/            dark-pattern classifier (phrase rules + neural network) and taxonomy
     llm/                  optional OpenAI-compatible LLM client (OpenAI, Mistral…)
     security/             SSRF guard, rate limiting, idempotency, errors
     supabase/  db/  auth/  queue/  api/
@@ -54,6 +54,7 @@ video/                    Remotion pitch video (separate package)
 | App | Next.js 16 (App Router), React 19, TypeScript |
 | UI | Tailwind CSS v4, Framer Motion, Radix UI, Zustand |
 | Agent | LangGraph JS, Playwright (headless Chromium), optional OpenAI-compatible LLM |
+| Neural detector | MiniLM sentence-embedding transformer run in-process (transformers.js / ONNX) with a classification head trained on the ec-darkpattern dataset |
 | Data | In-memory store with a single demo user (no sign-in) |
 | Tests | Vitest |
 
@@ -67,9 +68,16 @@ video/                    Remotion pitch video (separate package)
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
 | `npm run smoke` | Scripted run against the test site (needs the dev server running) |
 | `npm run db:start` / `db:reset` / `db:types` | Local Supabase helpers |
+| `npm run neural:train` | Retrain the neural detector's classification head (downloads the dataset, prints held-out accuracy, writes `src/server/detection/neural-head.json`) |
 | `npm run graph:seed` | One-off: create Neo4j constraints and load the pattern taxonomy + indicator phrases |
 
 Known issue: 4 tests currently fail. The two SSRF tests expect private addresses to be blocked, but dev mode allows them. The two graph-routing tests expect `completed` to route to COMPLETE, but the code routes it to VERIFY.
+
+## Neural detector
+
+Every sentence on a scanned page goes through a deep neural network: a 6-layer MiniLM transformer turns it into an embedding, and a softmax layer trained on 2,313 labelled texts from the [ec-darkpattern](https://github.com/yamanalab/ec-darkpattern) dataset decides whether it is false urgency, misdirection, social proof or harmless. On the 463 texts held out from training it gets 94.0% right. Findings above 85% certainty are added to what the phrase rules found; the evidence is always the sentence from the page.
+
+The model (about 23 MB) is downloaded from Hugging Face the first time a page is scanned and cached. If it cannot be loaded, scans carry on with the phrase rules alone.
 
 ## Environment variables
 

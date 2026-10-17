@@ -11,8 +11,9 @@ const __root =
 const nextConfig: NextConfig = {
   // Don't let next dev write AI assistant instruction files into the repo.
   agentRules: false,
-  // Playwright drives a real browser for the agent; keep it out of the bundle.
-  serverExternalPackages: ["playwright", "neo4j-driver"],
+  // Playwright drives a real browser for the agent, and the neural detector runs
+  // a native ONNX runtime; keep them out of the bundle.
+  serverExternalPackages: ["playwright", "neo4j-driver", "@huggingface/transformers", "onnxruntime-node"],
   // Pin the app root so Next does not walk up to the parent folder.
   turbopack: {
     root: __root,

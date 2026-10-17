@@ -1,7 +1,7 @@
 // =============================================================================
 // lib/detection/classifier.ts
-// Deterministic heuristic detector over a PerceptionResult. Optional LLM pass
-// refines language-based patterns. Webpage text is ALWAYS treated as data —
+// Deterministic heuristic detector over a PerceptionResult. A local neural
+// classifier and an optional LLM pass add what the phrase lists miss. Webpage text is ALWAYS treated as data —
 // never as instructions.
 // =============================================================================
 
@@ -10,6 +10,7 @@ import type { PerceptionResult, DarkPatternDetection, DetectionResult } from "@/
 import type { PatternType, Severity } from "@/types/database";
 import { TAXONOMY, overallRisk, patternDefinition } from "./taxonomy";
 import { chatStructured } from "@/server/llm/client";
+import { neuralClassify } from "./neural";
 import {
   LEARNED_THRESHOLD,
   graphContext,
@@ -279,9 +280,12 @@ export async function classifyPage(
   let graph: GraphContext | undefined;
 
   if (opts.useLLM !== false) {
+    // Neural pass: adds patterns the phrase lists missed (one finding per type,
+    // heuristics first). Its evidence is a page sentence, so it is grounded.
+    detections = dedupe([...heuristic, ...(await neuralClassify(perception))]);
     graph = await graphContext(
       perception.url,
-      heuristic.map((d) => d.patternType)
+      detections.map((d) => d.patternType)
     );
     const llm = await chatStructured(llmDetectionSchema, {
       system: SYSTEM_DETECTOR,
@@ -311,7 +315,7 @@ export async function classifyPage(
       // Merge: heuristic detections are authoritative; the LLM can add more,
       // but only findings whose evidence quote really is on the page.
       detections = dedupe([
-        ...heuristic,
+        ...detections,
         ...llm.detections
           .filter((d) => isGrounded(d.evidence, perception))
           .map((d) => ({

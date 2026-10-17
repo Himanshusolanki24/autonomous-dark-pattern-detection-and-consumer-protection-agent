@@ -17,9 +17,11 @@
     "db:types": "tsx scripts/generate-types.ts",
     "cleanup:proofs": "tsx scripts/cleanup-proofs.ts",
     "smoke": "tsx scripts/smoke-agent.ts",
-    "graph:seed": "tsx scripts/seed-graph.ts"
+    "graph:seed": "tsx scripts/seed-graph.ts",
+    "neural:train": "tsx scripts/train-neural.ts"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.1",
     "@langchain/langgraph": "^0.2.0",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-dialog": "^1.1.23",
