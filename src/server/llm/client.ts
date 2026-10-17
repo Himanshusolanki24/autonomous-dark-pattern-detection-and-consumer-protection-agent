@@ -17,6 +17,10 @@ interface ChatOptions {
   json?: boolean;
 }
 
+// ponytail: one fixed budget per call. A slow model falls back to the
+// deterministic path instead of stalling the run (or a serverless function).
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 20_000);
+
 function config() {
   const apiKey = process.env.LLM_API_KEY;
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.openai.com/v1";
@@ -32,6 +36,7 @@ export async function chat(opts: ChatOptions): Promise<string | null> {
 
   const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
     method: "POST",
+    signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${cfg.apiKey}`,
