@@ -13,12 +13,22 @@ const nextConfig: NextConfig = {
   agentRules: false,
   // Playwright drives a real browser for the agent, and the neural detector runs
   // a native ONNX runtime; keep them out of the bundle.
-  serverExternalPackages: ["playwright", "neo4j-driver", "@huggingface/transformers", "onnxruntime-node"],
+  serverExternalPackages: [
+    "playwright",
+    "@sparticuz/chromium",
+    "neo4j-driver",
+    "@huggingface/transformers",
+    "onnxruntime-node",
+  ],
   // Pin the app root so Next does not walk up to the parent folder.
   turbopack: {
     root: __root,
   },
   outputFileTracingRoot: __root,
+  // The serverless Chromium is unpacked from these at runtime, so the tracer can't see them.
+  outputFileTracingIncludes: {
+    "/api/**": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
 };
 
 export default nextConfig;

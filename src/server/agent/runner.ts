@@ -10,6 +10,7 @@ import { browserManager } from "@/server/browser/manager";
 import { createGraph } from "./graph";
 import { AgentCancelledError, type AgentState } from "./state";
 import { emitEvent } from "./events";
+import { after } from "next/server";
 import { jobQueue } from "@/server/queue/runner";
 import { validateTargetUrl } from "@/server/security/ssrf";
 import type { Json } from "@/types/database";
@@ -169,10 +170,25 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
 /** Enqueue a fire-and-forget run. The API route returns before completion. */
 export function enqueueStart(input: StartRunInput): void {
   jobQueue.enqueue(() => runToCompletion(input));
+  keepAlive();
 }
 
 export function enqueueResume(input: ResumeRunInput): void {
   jobQueue.enqueue(() => runToCompletion(input));
+  keepAlive();
+}
+
+/**
+ * The route answers 202 straight away. On serverless the instance can be frozen
+ * once the response is sent, so keep the request open in the background until
+ * the queue drains (Next's after() maps to Vercel's waitUntil).
+ */
+function keepAlive(): void {
+  try {
+    after(() => jobQueue.drain());
+  } catch {
+    // Outside a request (scripts, tests) there is nothing to keep alive.
+  }
 }
 
 /** Validate the target URL (SSRF) before anything is queued. */

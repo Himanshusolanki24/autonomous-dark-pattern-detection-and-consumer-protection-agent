@@ -5,8 +5,31 @@
 // completion and guarded by hard timeouts.
 // =============================================================================
 
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
 import { SESSION_TIMEOUT_MS } from "@/types/agent";
+
+/**
+ * Playwright is imported on first launch, not at module load: on Linux its
+ * import calls os.homedir(), which throws in a serverless sandbox with no HOME
+ * and took down every route that imports this file. On Vercel there is also no
+ * `playwright install`, so the packaged serverless Chromium is used instead.
+ */
+async function launchChromium(): Promise<Browser> {
+  process.env.XDG_CACHE_HOME ??= "/tmp/.cache";
+  const { chromium } = await import("playwright");
+  if (process.env.VERCEL) {
+    const { default: serverless } = await import("@sparticuz/chromium");
+    return chromium.launch({
+      headless: true,
+      executablePath: await serverless.executablePath(),
+      args: serverless.args,
+    });
+  }
+  return chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+}
 
 export interface BrowserSessionHandle {
   sessionId: string;
@@ -36,13 +59,7 @@ class BrowserManager {
   private waiting = new Map<string, (shot: Buffer) => void>();
 
   constructor(options: BrowserManagerOptions = {}) {
-    this.launcher =
-      options.launch ??
-      (() =>
-        chromium.launch({
-          headless: true,
-          args: ["--no-sandbox", "--disable-dev-shm-usage"],
-        }));
+    this.launcher = options.launch ?? launchChromium;
     this.opts = {
       sessionTimeoutMs: options.sessionTimeoutMs ?? SESSION_TIMEOUT_MS,
       navigationTimeoutMs: options.navigationTimeoutMs ?? 30_000,
