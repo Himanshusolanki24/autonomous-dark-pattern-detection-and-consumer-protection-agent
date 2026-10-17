@@ -63,7 +63,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const message =
       typeof rawMessage === "string" && rawMessage.length > 0
         ? rawMessage
-        : `${res.status} ${res.statusText}`;
+        : // HTTP/2 has no status text; an empty body means the server crashed before answering.
+          `the server failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""}). Try again in a moment.`;
     throw new ApiError(message, res.status, code);
   }
 
