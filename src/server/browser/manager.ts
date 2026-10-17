@@ -7,6 +7,7 @@
 
 import type { Browser, BrowserContext, Page } from "playwright";
 import { SESSION_TIMEOUT_MS } from "@/types/agent";
+import { BrowserAutomationError } from "@/server/security/errors";
 
 /**
  * Playwright is imported on first launch, not at module load: on Linux its
@@ -19,11 +20,20 @@ async function launchChromium(): Promise<Browser> {
   const { chromium } = await import("playwright");
   if (process.env.VERCEL) {
     const { default: serverless } = await import("@sparticuz/chromium");
-    return chromium.launch({
-      headless: true,
-      executablePath: await serverless.executablePath(),
-      args: serverless.args,
-    });
+    try {
+      return await chromium.launch({
+        headless: true,
+        executablePath: await serverless.executablePath(),
+        // Playwright gives every session its own context and closes it after;
+        // in --single-process mode that takes the whole browser down.
+        args: serverless.args.filter((a) => a !== "--single-process"),
+      });
+    } catch (err) {
+      // First line only: the rest is Playwright's call log.
+      const reason = (err as Error).message.split("\n")[0];
+      console.error("[browser] serverless chromium failed to launch:", (err as Error).message);
+      throw new BrowserAutomationError(`The browser couldn't start: ${reason}`);
+    }
   }
   return chromium.launch({
     headless: true,
