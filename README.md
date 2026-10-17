@@ -71,8 +71,6 @@ video/                    Remotion pitch video (separate package)
 | `npm run neural:train` | Retrain the neural detector's classification head (downloads the dataset, prints held-out accuracy, writes `src/server/detection/neural-head.json`) |
 | `npm run graph:seed` | One-off: create Neo4j constraints and load the pattern taxonomy + indicator phrases |
 
-Known issue: 4 tests currently fail. The two SSRF tests expect private addresses to be blocked, but dev mode allows them. The two graph-routing tests expect `completed` to route to COMPLETE, but the code routes it to VERIFY.
-
 ## Neural detector
 
 Every sentence on a scanned page goes through a deep neural network: a 6-layer MiniLM transformer turns it into an embedding, and a softmax layer trained on 2,313 labelled texts from the [ec-darkpattern](https://github.com/yamanalab/ec-darkpattern) dataset decides whether it is false urgency, misdirection, social proof or harmless. On the 463 texts held out from training it gets 94.0% right. Findings above 85% certainty are added to what the phrase rules found; the evidence is always the sentence from the page.
