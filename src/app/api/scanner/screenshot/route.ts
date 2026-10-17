@@ -10,6 +10,7 @@ import { requireUser } from "@/server/auth/guards";
 import { checkRateLimit } from "@/server/security/rate-limit";
 import { validateTargetUrl } from "@/server/security/ssrf";
 import { browserManager } from "@/server/browser/manager";
+import { BrowserAutomationError } from "@/server/security/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,16 @@ export const GET = api(async (req: Request) => {
   if (!raw) throw new Error("Missing url");
   const url = await validateTargetUrl(raw);
 
-  const shot = await browserManager.screenshot(url.toString());
+  let shot: Buffer;
+  try {
+    shot = await browserManager.screenshot(url.toString());
+  } catch (err) {
+    if (err instanceof BrowserAutomationError) throw err;
+    // First line only: the rest is Playwright's call log.
+    const reason = (err as Error).message.split("\n")[0];
+    console.error("[screenshot] render failed:", (err as Error).message);
+    throw new BrowserAutomationError(`Could not render ${url.hostname}: ${reason}`);
+  }
 
   return new NextResponse(new Uint8Array(shot), {
     status: 200,

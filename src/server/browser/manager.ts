@@ -19,8 +19,8 @@ async function launchChromium(): Promise<Browser> {
   process.env.XDG_CACHE_HOME ??= "/tmp/.cache";
   const { chromium } = await import("playwright");
   if (process.env.VERCEL) {
-    const { default: serverless } = await import("@sparticuz/chromium");
     try {
+      const { default: serverless } = await import("@sparticuz/chromium");
       return await chromium.launch({
         headless: true,
         executablePath: await serverless.executablePath(),
