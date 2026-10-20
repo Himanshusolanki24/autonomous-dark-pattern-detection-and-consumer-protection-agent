@@ -70,6 +70,7 @@ video/                    Remotion pitch video (separate package)
 | `npm run db:start` / `db:reset` / `db:types` | Local Supabase helpers |
 | `npm run neural:train` | Retrain the neural detector's classification head (downloads the dataset, prints held-out accuracy, writes `src/server/detection/neural-head.json`) |
 | `npm run graph:seed` | One-off: create Neo4j constraints and load the pattern taxonomy + indicator phrases |
+| `npm run tinyfish:smoke` | Live check of all four TinyFish APIs (Search, Fetch, Browser, Web Agent) against the public test site; uses real TinyFish credits |
 
 ## Neural detector
 
@@ -86,6 +87,8 @@ Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
 | `SUPABASE_DEV_MODE` | Set `"false"` to turn on SSRF blocking of private and loopback addresses. Always on when deployed to Vercel. |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Optional LLM fallback for planning and classification, e.g. `https://api.mistral.ai/v1` with `mistral-large-latest` |
 | `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` | Optional Neo4j knowledge graph and agent memory. Detection reads prior findings, co-occurring patterns and example phrases; planning reuses clicks from verified runs; action and verification write back. LLM findings are kept only if their evidence quote appears verbatim on the page. Run `npm run graph:seed` once. It also keeps a path map of each cancellation flow (pages linked by the clicks between them), which the planner uses to follow the shortest known route and to ask for approval before the click that lands on the cancelled page. The graph also holds what the agent learns from rewards: clicks are rewarded when a run is verified, and findings are rewarded by the "Is this really a dark pattern?" buttons in the scanner. |
+| `TINYFISH_API_KEY` | Turns on TinyFish: public pages open in a TinyFish cloud browser (local Chromium is the fallback), the scanner adds TinyFish Fetch text, a typed name runs TinyFish Search, and the Agent page gets "Run with the TinyFish agent" |
+| `TINYFISH_TARGET_URL` | Public URL of the test site for TinyFish, which can't reach localhost |
 | `PROOFS_DIR` | Where proof screenshots are written (default `.proofs/`) |
 | `NEXT_PUBLIC_API_URL` | Only if the API is hosted on a different origin from the UI (default: same origin) |
 
