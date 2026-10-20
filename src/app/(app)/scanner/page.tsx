@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, ChevronDown, CircleAlert, Globe, Loader2, ScanSearch, ShieldCheck } from "lucide-react";
 import { scanUrl, type ScanResult } from "@/lib/services/scannerService";
+import { searchPages, tinyfishStatus, type SearchHit, type TinyFishCall } from "@/lib/services/tinyfishService";
+import { TinyFishActivity } from "@/components/tinyfish/TinyFishActivity";
 import { demoTargetUrl } from "@/lib/api";
 import { PATTERN_LABELS } from "@/lib/constants";
 import { cn, hostnameOf } from "@/lib/utils";
@@ -15,7 +17,13 @@ import { ConfidenceBar } from "@/components/ui/confidence-bar";
 import { Button } from "@/components/ui/button";
 import { Marker, PageHeader, Window } from "@/components/ui/case";
 
-type Phase = "idle" | "scanning" | "done" | "error";
+type Phase = "idle" | "searching" | "picking" | "scanning" | "done" | "error";
+
+/** Typed text with no dot and no scheme is a service name, not an address: search for it. */
+function looksLikeName(raw: string): boolean {
+  const t = raw.trim();
+  return !!t && !t.includes(".") && !/^https?:\/\//i.test(t) && !/^localhost\b/i.test(t);
+}
 
 const STEPS = ["Opening the page", "Reading buttons and text", "Checking for known traps", "Writing up the verdict"];
 
@@ -118,6 +126,16 @@ function Scanner() {
   const [target, setTarget] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [evidence, setEvidence] = useState<DarkPattern | null>(null);
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [searchCalls, setSearchCalls] = useState<TinyFishCall[]>([]);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  // With TinyFish on, the test site is the public deploy: its cloud can't open localhost.
+  const [testSite, setTestSite] = useState<string | null>(null);
+  useEffect(() => {
+    tinyfishStatus()
+      .then((s) => setTestSite(s.enabled ? s.demoUrl : null))
+      .catch(() => {});
+  }, []);
   const started = useRef(false);
 
   const analyze = async (url: string) => {
@@ -131,6 +149,7 @@ function Scanner() {
       setResult(await scanUrl(url));
       setPhase("done");
     } catch {
+      setErrorText(null);
       setPhase("error");
     } finally {
       clearInterval(timer);
@@ -147,8 +166,29 @@ function Scanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const findPages = async (name: string) => {
+    setPhase("searching");
+    setResult(null);
+    setHits([]);
+    setSearchCalls([]);
+    try {
+      const res = await searchPages(name);
+      setHits(res.results);
+      setSearchCalls(res.tinyfish);
+      setPhase("picking");
+    } catch (err) {
+      setErrorText((err as Error).message);
+      setPhase("error");
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (looksLikeName(input)) {
+      setInputError(null);
+      void findPages(input.trim());
+      return;
+    }
     const url = toUrl(input);
     if (!url) {
       setInputError(input.trim() ? "That doesn’t look like a web address." : "Paste a page address first.");
@@ -177,8 +217,8 @@ function Scanner() {
               setInput(e.target.value);
               setInputError(null);
             }}
-            disabled={phase === "scanning"}
-            placeholder="https://example.com/account"
+            disabled={phase === "scanning" || phase === "searching"}
+            placeholder="https://example.com/account, or just a name like StreamVault"
             aria-invalid={!!inputError}
             aria-describedby={inputError ? "scan-error" : undefined}
             className={cn(
@@ -187,9 +227,9 @@ function Scanner() {
             )}
           />
         </label>
-        <Button type="submit" size="lg" disabled={phase === "scanning"} className="h-12 rounded-xl px-6">
-          {phase === "scanning" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ScanSearch className="h-4 w-4" aria-hidden="true" />}
-          {phase === "scanning" ? "Scanning…" : "Scan page"}
+        <Button type="submit" size="lg" disabled={phase === "scanning" || phase === "searching"} className="h-12 rounded-xl px-6">
+          {phase === "scanning" || phase === "searching" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ScanSearch className="h-4 w-4" aria-hidden="true" />}
+          {phase === "scanning" ? "Scanning…" : phase === "searching" ? "Searching…" : looksLikeName(input) ? "Find pages" : "Scan page"}
         </Button>
       </form>
       {inputError && (
@@ -204,9 +244,45 @@ function Scanner() {
           <p className="mx-auto mt-2 max-w-md text-[14px] text-zinc-500">
             Try it on our StreamVault test site. It is built with the same tricks real subscription pages use.
           </p>
-          <Button variant="outline" className="mt-5" onClick={() => void analyze(demoTargetUrl())}>
+          <Button variant="outline" className="mt-5" onClick={() => void analyze(testSite ?? demoTargetUrl())}>
             Scan the test site
           </Button>
+        </div>
+      )}
+
+      {phase === "searching" && (
+        <p className="flex items-center gap-2 text-[14px] text-zinc-500">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> TinyFish Search is looking for “{input.trim()}”…
+        </p>
+      )}
+
+      {phase === "picking" && (
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+          <div>
+            <h2 className="text-[15px] font-semibold">Which page should we scan?</h2>
+            <p className="mt-1 text-[13.5px] text-zinc-500">Top results from TinyFish Search. Nothing is scanned until you pick one.</p>
+            {hits.length === 0 ? (
+              <p className="mt-4 text-[14px] text-zinc-600">No pages found. Try another name, or paste the address.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {hits.map((h) => (
+                  <li key={h.url}>
+                    <button
+                      type="button"
+                      onClick={() => void analyze(h.url)}
+                      className="w-full rounded-xl border border-border bg-surface p-4 text-left transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      <p className="text-[12px] text-zinc-500">{h.site}</p>
+                      <p className="mt-0.5 font-semibold">{h.title}</p>
+                      <p className="mt-1 line-clamp-2 text-[13px] text-zinc-600">{h.snippet}</p>
+                      <p className="mt-1 truncate font-mono text-[11.5px] text-brand">{h.url}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <TinyFishActivity calls={searchCalls} />
         </div>
       )}
 
@@ -214,9 +290,9 @@ function Scanner() {
         <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5">
           <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
           <div>
-            <p className="font-semibold text-red-800">The page couldn’t be scanned</p>
+            <p className="font-semibold text-red-800">{errorText ? "The search didn’t work" : "The page couldn’t be scanned"}</p>
             <p className="mt-1 text-[14px] text-red-700">
-              Check the address opens in your browser, then try again. Pages behind a login can’t be scanned yet.
+              {errorText ?? "Check the address opens in your browser, then try again. Pages behind a login can’t be scanned yet."}
             </p>
           </div>
         </div>
@@ -277,6 +353,8 @@ function Scanner() {
                       ? "No traps above our detection threshold. This is an automated estimate, not a guarantee."
                       : `${result.patterns.length} trap${result.patterns.length === 1 ? "" : "s"} found. ${verdict.line}`}
                   </p>
+
+                  <TinyFishActivity calls={[...searchCalls, ...result.tinyfish]} className="mt-6" />
 
                   {result.patterns.length > 0 ? (
                     <>
