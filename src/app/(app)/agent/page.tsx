@@ -16,6 +16,7 @@ import { BrowserFrame } from "@/components/browser/BrowserFrame";
 import { AgentDecision } from "@/components/agent/AgentDecision";
 import { Button } from "@/components/ui/button";
 import { Marker, PageHeader, Stamp } from "@/components/ui/case";
+import { TinyFishAgentPanel } from "@/components/tinyfish/TinyFishAgentPanel";
 
 const STAGE_VERB: Record<AgentId, string> = {
   perception: "Look",
@@ -267,6 +268,7 @@ function AgentConsole() {
             </li>
           ))}
         </ol>
+        <TinyFishAgentPanel />
       </div>
     );
   }
