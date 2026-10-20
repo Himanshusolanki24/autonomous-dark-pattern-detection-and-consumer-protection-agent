@@ -16,6 +16,8 @@ export const DEFAULT_RATE_LIMITS: Record<string, RateLimitConfig> = {
   scanner: { limit: 30, windowMs: 60 * 60 * 1000 }, // 30/hour
   feedback: { limit: 120, windowMs: 60 * 60 * 1000 }, // 120/hour
   approval: { limit: 20, windowMs: 60 * 60 * 1000 }, // 20/hour
+  tinyfishSearch: { limit: 60, windowMs: 60 * 60 * 1000 }, // 60/hour
+  tinyfishAgent: { limit: 10, windowMs: 60 * 60 * 1000 }, // 10/hour: each run costs TinyFish credits
 };
 
 interface Bucket {
