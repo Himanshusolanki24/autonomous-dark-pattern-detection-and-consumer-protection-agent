@@ -13,6 +13,13 @@ import { validateTargetUrl } from "@/server/security/ssrf";
 import { browserManager } from "@/server/browser/manager";
 import { perceive } from "@/server/browser/perception";
 import { classifyPage } from "@/server/detection/classifier";
+import { MAX_VISIBLE_TEXT } from "@/server/browser/perception";
+import {
+  fetchPages,
+  reachableFromCloud,
+  tinyfishEnabled,
+  type TinyFishCall,
+} from "@/server/tinyfish/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,13 +32,27 @@ export const POST = api(async (req: Request) => {
   const url = await validateTargetUrl(body.url);
 
   const scanId = `scan_${crypto.randomUUID()}`;
-  const browser = await browserManager.createSession(scanId);
+  const tinyfish: TinyFishCall[] = [];
+  // TinyFish Fetch reads the same page as clean text while the browser loads it,
+  // so traps hidden in text the visible page doesn't show still reach the detector.
+  const fetched =
+    tinyfishEnabled() && reachableFromCloud(url.toString())
+      ? fetchPages([url.toString()], tinyfish).catch(() => [])
+      : Promise.resolve([]);
+  const browser = await browserManager.createSession(scanId, url.toString(), tinyfish);
+  if (browser.via === "tinyfish") {
+    tinyfish.push({ api: "browser", label: "Open the page in the cloud browser", ok: true, ms: 0, id: browser.cloudSessionId });
+  }
 
   try {
     await browser.page.goto(url.toString(), { waitUntil: "domcontentloaded" });
     await browser.page.waitForTimeout(1200);
 
     const perception = await perceive(browser.page);
+    const fetchedText = (await fetched).map((p) => p.text).join("\n").trim();
+    if (fetchedText) {
+      perception.visibleText = `${perception.visibleText}\n${fetchedText}`.slice(0, MAX_VISIBLE_TEXT * 2);
+    }
     // Hand the preview a picture of the page we already have open.
     await browserManager.captureShot(browser.page, perception.url, url.toString());
     const result = await classifyPage(perception);
@@ -61,6 +82,8 @@ export const POST = api(async (req: Request) => {
       title: perception.title,
       overallRisk: result.overallRisk,
       patternsDetected: result.detections.length,
+      browser: browser.via,
+      tinyfish,
       detections: result.detections.map((d) => ({
         patternType: d.patternType,
         severity: d.severity,

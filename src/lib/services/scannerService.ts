@@ -3,6 +3,7 @@
 import { api } from "@/lib/api";
 import type { DarkPattern, RiskOverview } from "@/lib/types";
 import { PATTERN_TYPE_MAP } from "@/lib/services/agentService";
+import type { TinyFishCall } from "@/lib/services/tinyfishService";
 
 export interface ScanProgress {
   label: string;
@@ -27,6 +28,9 @@ export interface ScanResult {
   risk: RiskOverview;
   patterns: DarkPattern[];
   perception: PerceptionData;
+  /** Where the page was opened: a TinyFish cloud browser or the local one. */
+  browser: "tinyfish" | "local";
+  tinyfish: TinyFishCall[];
 }
 
 interface BackendScanDetection {
@@ -44,6 +48,8 @@ interface BackendScan {
   overallRisk: string;
   patternsDetected: number;
   detections: BackendScanDetection[];
+  browser?: "tinyfish" | "local";
+  tinyfish?: TinyFishCall[];
 }
 
 export async function scanUrl(url: string): Promise<ScanResult> {
@@ -90,7 +96,7 @@ const perception: PerceptionData = {
       patterns.filter((p) => p.severity === "medium").length,
   };
 
-  return { url: res.url, risk, patterns, perception };
+  return { url: res.url, risk, patterns, perception, browser: res.browser ?? "local", tinyfish: res.tinyfish ?? [] };
 }
 
 function mapRisk(level: string): RiskOverview["overall"] {
