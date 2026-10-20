@@ -5,6 +5,8 @@
 // completion and guarded by hard timeouts.
 // =============================================================================
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { SESSION_TIMEOUT_MS } from "@/types/agent";
 import { BrowserAutomationError } from "@/server/security/errors";
@@ -17,13 +19,19 @@ import { BrowserAutomationError } from "@/server/security/errors";
  */
 async function launchChromium(): Promise<Browser> {
   process.env.XDG_CACHE_HOME ??= "/tmp/.cache";
+  // Playwright requires browsers.json by a runtime path the build can't trace,
+  // so Vercel left it out. Naming it by a literal path here makes the build ship it.
+  readFileSync(join(process.cwd(), "node_modules/playwright-core/browsers.json"));
   const { chromium } = await import("playwright");
   if (process.env.VERCEL) {
     try {
       const { default: serverless } = await import("@sparticuz/chromium");
       return await chromium.launch({
         headless: true,
-        executablePath: await serverless.executablePath(),
+        // A literal path, so the build ships the compressed browser in bin/.
+        executablePath: await serverless.executablePath(
+          join(process.cwd(), "node_modules/@sparticuz/chromium/bin")
+        ),
         // Playwright gives every session its own context and closes it after;
         // in --single-process mode that takes the whole browser down.
         args: serverless.args.filter((a) => a !== "--single-process"),
