@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Check, Minus, Shield, X } from "lucide-react";
 import { HeroCase } from "@/components/landing/HeroCase";
+import { SystemMap } from "@/components/landing/SystemMap";
 import { Marker } from "@/components/ui/case";
 
 const REPO = "https://github.com/Himanshusolanki24/autonomous-dark-pattern-detection-and-consumer-protection-agent";
@@ -99,6 +100,7 @@ export default function LandingPage() {
         </Link>
         <nav className="hidden items-center gap-7 text-[14px] text-zinc-600 md:flex" aria-label="Sections">
           <a href="#how" className="hover:text-foreground">How it works</a>
+          <a href="#system" className="hover:text-foreground">The system</a>
           <a href="#catches" className="hover:text-foreground">What it catches</a>
           <a href="#compare" className="hover:text-foreground">Why TrapKiller</a>
           <a href="#safety" className="hover:text-foreground">Safety</a>
@@ -170,6 +172,8 @@ export default function LandingPage() {
             ))}
           </ol>
         </section>
+
+        <SystemMap />
 
         {/* What it catches */}
         <section id="catches" className="border-y border-border bg-surface">
