@@ -27,3 +27,7 @@ supabase/.temp
 .DS_Store
 *.pem
 npm-debug.log*
+
+# pitch decks stay local
+/*.pptx
+/*.pdf
