@@ -78,6 +78,51 @@ Every sentence on a scanned page goes through a deep neural network: a 6-layer M
 
 The model (about 23 MB) is downloaded from Hugging Face the first time a page is scanned and cached. If it cannot be loaded, scans carry on with the phrase rules alone.
 
+## TinyFish integration
+
+### Why we use TinyFish
+
+Dark patterns live on real, live websites, and that is where a local headless browser falls short:
+
+- **Real sites fight bots.** Many subscription pages block or degrade a plain headless Chromium. TinyFish's cloud browsers are built to load real sites the way a person would see them.
+- **It doesn't scale from a laptop.** Each agent run keeps a browser open for minutes while it waits for your approval. Running that in the cloud means the server (including a serverless deploy on Vercel) doesn't have to host Chromium itself.
+- **One page view isn't enough evidence.** The scanner wants the page's full text, not only what fits in the first screen. TinyFish Fetch returns the whole page as clean markdown.
+- **Users don't always know the URL.** People type "StreamVault", not `https://…/account`. TinyFish Search turns a service name into candidate pages.
+- **Some cancel flows are too messy for fixed rules.** Our own planner follows phrase rules tuned to known flows. The TinyFish Web Agent can walk an unfamiliar flow from a plain-English goal, while we keep the human-approval step.
+
+TinyFish is an add-on, not a requirement. Without `TINYFISH_API_KEY` everything runs on local Chromium as before, and if a TinyFish call fails the app falls back to the local browser.
+
+### How we use it
+
+All four TinyFish APIs are used, each in a specific place:
+
+| API | Endpoint | Where it plugs in | What it does |
+| --- | -------- | ----------------- | ------------ |
+| **Browser** | `POST https://api.browser.tinyfish.ai` → `cdp_url` | `src/server/browser/manager.ts` (`browserFor`) | Opens a TinyFish cloud browser and drives it with Playwright over CDP. Used for both scans and agent runs. One shared cloud browser, one isolated context per session |
+| **Fetch** | `POST https://api.fetch.tinyfish.ai` (`format: "markdown"`) | `src/app/api/scanner/analyze/route.ts` | Fetches the page's full text and adds it to what the detector reads, alongside the Playwright view, before `classifyPage` runs |
+| **Search** | `GET https://api.search.tinyfish.ai` | `src/app/api/tinyfish/search/route.ts` | On the scanner, typing a name with no "." (e.g. `StreamVault`) shows 5 results. You pick one; it never auto-picks |
+| **Web Agent** | `POST https://agent.tinyfish.ai/v1/automation/run-sse` | `src/app/api/tinyfish/agent/route.ts`, `src/components/tinyfish/TinyFishAgentPanel.tsx` | "Run with the TinyFish agent" on the Agent page, with a live view of the run (see below) |
+
+**The Web Agent keeps the human in the loop.** It runs in two steps:
+
+1. **Explore run:** the goal tells it to walk the cancel flow, decline every retention offer, and **stop on the final confirmation screen without clicking it**. It reports each screen and every trick it saw.
+2. You review the report and press **Approve** or **Reject**. Approve starts a second short **confirm run** that clicks the final button and reports the confirmation message. Reject does nothing.
+
+The goals are in `CANCEL_GOALS` in `src/server/tinyfish/client.ts`. The run streams back as server-sent events; the live `streaming_url` is shown in an iframe, with an "open in new tab" link as a fallback.
+
+**When the cloud is used.** TinyFish runs in the cloud, so it can't reach `localhost` or private addresses. `reachableFromCloud()` keeps those targets on local Chromium. To try TinyFish against the test site in local dev, set `TINYFISH_TARGET_URL` to the public deploy (`https://autonomous-dark-pattern-detection-a.vercel.app/demo-target/account`).
+
+**You can see every call.** The TinyFish activity panel (`src/components/tinyfish/TinyFishActivity.tsx`) lists each call made for a scan or run: API, status, time in ms, and run/session id. Scans and agent case logs also say which browser was used (`tinyfish` or `local`).
+
+**Code map**
+
+- `src/server/tinyfish/client.ts`: the four API clients (all send the `X-API-Key` header), the call recorder, the SSE parser, `reachableFromCloud()` and `CANCEL_GOALS`
+- `src/app/api/tinyfish/status/route.ts`: tells the UI whether TinyFish is on
+- `src/lib/services/tinyfishService.ts`: client-side calls
+- Rate limits (`src/server/security/rate-limit.ts`): Search 60/hour, Web Agent 10/hour
+
+**Check it live:** `npm run tinyfish:smoke` makes one real call to each API against the public test site (uses TinyFish credits).
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local`. Everything is optional in dev mode.
