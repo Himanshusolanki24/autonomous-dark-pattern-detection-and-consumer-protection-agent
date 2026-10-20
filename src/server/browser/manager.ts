@@ -10,6 +10,13 @@ import { join } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { SESSION_TIMEOUT_MS } from "@/types/agent";
 import { BrowserAutomationError } from "@/server/security/errors";
+import {
+  closeBrowserSession,
+  createBrowserSession,
+  reachableFromCloud,
+  tinyfishEnabled,
+  type TinyFishCall,
+} from "@/server/tinyfish/client";
 
 /**
  * Playwright is imported on first launch, not at module load: on Linux its
@@ -17,12 +24,16 @@ import { BrowserAutomationError } from "@/server/security/errors";
  * and took down every route that imports this file. On Vercel there is also no
  * `playwright install`, so the packaged serverless Chromium is used instead.
  */
-async function launchChromium(): Promise<Browser> {
+async function loadChromium() {
   process.env.XDG_CACHE_HOME ??= "/tmp/.cache";
   // Playwright requires browsers.json by a runtime path the build can't trace,
   // so Vercel left it out. Naming it by a literal path here makes the build ship it.
   readFileSync(join(process.cwd(), "node_modules/playwright-core/browsers.json"));
-  const { chromium } = await import("playwright");
+  return (await import("playwright")).chromium;
+}
+
+async function launchChromium(): Promise<Browser> {
+  const chromium = await loadChromium();
   if (process.env.VERCEL) {
     try {
       const { default: serverless } = await import("@sparticuz/chromium");
@@ -53,6 +64,15 @@ export interface BrowserSessionHandle {
   sessionId: string;
   context: BrowserContext;
   page: Page;
+  /** Where the browser runs: a TinyFish cloud browser, or Chromium on this server. */
+  via: "tinyfish" | "local";
+  /** The TinyFish browser session id, when `via` is "tinyfish". */
+  cloudSessionId?: string;
+}
+
+interface CloudBrowser {
+  browser: Browser;
+  sessionId: string;
 }
 
 /** How long a preview screenshot is reused. */
@@ -73,11 +93,16 @@ class BrowserManager {
   private readonly opts: Required<Omit<BrowserManagerOptions, "launch">>;
   private readonly launcher: () => Promise<Browser>;
   private launching: Promise<Browser> | null = null;
+  /** Injected launchers are tests: they must never reach the network. */
+  private readonly useCloud: boolean;
+  private cloud: CloudBrowser | null = null;
+  private cloudStarting: Promise<CloudBrowser> | null = null;
   private shots = new Map<string, { at: number; shot: Promise<Buffer> }>();
   private waiting = new Map<string, (shot: Buffer) => void>();
 
   constructor(options: BrowserManagerOptions = {}) {
     this.launcher = options.launch ?? launchChromium;
+    this.useCloud = !options.launch;
     this.opts = {
       sessionTimeoutMs: options.sessionTimeoutMs ?? SESSION_TIMEOUT_MS,
       navigationTimeoutMs: options.navigationTimeoutMs ?? 30_000,
@@ -102,12 +127,60 @@ class BrowserManager {
     return this.launching;
   }
 
+  /**
+   * One TinyFish cloud browser, shared by sessions through separate contexts.
+   * If it disconnects (inactivity timeout), the next session starts a new one.
+   */
+  private async getCloudBrowser(log?: TinyFishCall[]): Promise<CloudBrowser> {
+    if (this.cloud?.browser.isConnected()) return this.cloud;
+    if (!this.cloudStarting) {
+      this.cloudStarting = (async () => {
+        const session = await createBrowserSession(log);
+        try {
+          const chromium = await loadChromium();
+          const browser = await chromium.connectOverCDP(session.cdpUrl, { timeout: 30_000 });
+          const cloud = { browser, sessionId: session.sessionId };
+          browser.on("disconnected", () => {
+            if (this.cloud === cloud) this.cloud = null;
+          });
+          this.cloud = cloud;
+          return cloud;
+        } catch (err) {
+          await closeBrowserSession(session.sessionId);
+          throw err;
+        }
+      })().finally(() => {
+        this.cloudStarting = null;
+      });
+    }
+    return this.cloudStarting;
+  }
+
+  /**
+   * The browser for a target: a TinyFish cloud browser when a key is set and the
+   * cloud can reach the URL, otherwise (or if TinyFish fails) the local one.
+   */
+  private async browserFor(
+    targetUrl: string | undefined,
+    log?: TinyFishCall[]
+  ): Promise<{ browser: Browser; via: "tinyfish" | "local"; cloudSessionId?: string }> {
+    if (this.useCloud && targetUrl && tinyfishEnabled() && reachableFromCloud(targetUrl)) {
+      try {
+        const cloud = await this.getCloudBrowser(log);
+        return { browser: cloud.browser, via: "tinyfish", cloudSessionId: cloud.sessionId };
+      } catch (err) {
+        console.warn("[browser] TinyFish cloud browser unavailable, using the local one:", (err as Error).message);
+      }
+    }
+    return { browser: await this.getBrowser(), via: "local" };
+  }
+
   /** Create an isolated context for a session (no shared cookies/auth). */
-  async createSession(sessionId: string): Promise<BrowserSessionHandle> {
+  async createSession(sessionId: string, targetUrl?: string, log?: TinyFishCall[]): Promise<BrowserSessionHandle> {
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
 
-    const browser = await this.getBrowser();
+    const { browser, via, cloudSessionId } = await this.browserFor(targetUrl, log);
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
       userAgent:
@@ -117,7 +190,7 @@ class BrowserManager {
     page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
     page.setDefaultTimeout(this.opts.actionTimeoutMs);
 
-    const handle = { sessionId, context, page };
+    const handle: BrowserSessionHandle = { sessionId, context, page, via, cloudSessionId };
     this.sessions.set(sessionId, handle);
 
     const timer = setTimeout(() => {
@@ -182,7 +255,7 @@ class BrowserManager {
   }
 
   private async renderShot(url: string): Promise<Buffer> {
-    const browser = await this.getBrowser();
+    const { browser } = await this.browserFor(url);
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
       userAgent:

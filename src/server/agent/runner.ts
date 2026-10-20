@@ -105,8 +105,18 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
   // Browser session: reuse if alive (approval resume), else (re)create.
   let browser = browserManager.getSession(input.sessionId);
   if (!browser) {
-    browser = await browserManager.createSession(input.sessionId);
     const target = state.lastUrl && state.lastUrl !== "about:blank" ? state.lastUrl : state.targetUrl;
+    browser = await browserManager.createSession(input.sessionId, target);
+    await emitEvent(supabase, input.sessionId, {
+      userId: input.userId,
+      agent: "perception",
+      eventType: "session_started",
+      message:
+        browser.via === "tinyfish"
+          ? `Running on a TinyFish cloud browser (session ${browser.cloudSessionId})`
+          : "Running on the local browser",
+      status: "running",
+    });
     try {
       await browser.page.goto(target, { waitUntil: "domcontentloaded", timeout: 20000 });
     } catch {
