@@ -3,6 +3,7 @@
 import { api } from "@/lib/api";
 import type { DarkPattern, RiskOverview } from "@/lib/types";
 import { PATTERN_TYPE_MAP } from "@/lib/services/agentService";
+import { WHY_IT_MATTERS } from "@/lib/constants";
 import type { TinyFishCall } from "@/lib/services/tinyfishService";
 
 export interface ScanProgress {
@@ -55,17 +56,19 @@ interface BackendScan {
 export async function scanUrl(url: string): Promise<ScanResult> {
   const res = await api.post<BackendScan>("/api/scanner/analyze", { url });
 
-  const patterns: DarkPattern[] = res.detections.map((d, i) => ({
-    id: `scan_${i}`,
-    type: PATTERN_TYPE_MAP[d.patternType] ?? "hard-to-cancel",
-    severity: d.severity,
-    confidence: d.confidence,
-    element: d.elementText ?? "Detected element",
-    explanation: d.explanation,
-    whyItMatters:
-      "This pattern was flagged automatically. Review the evidence before proceeding.",
-    feedback: d.elementText ? { patternType: d.patternType, evidence: d.elementText } : undefined,
-  }));
+  const patterns: DarkPattern[] = res.detections.map((d, i) => {
+    const type = PATTERN_TYPE_MAP[d.patternType] ?? "hard-to-cancel";
+    return {
+      id: `scan_${i}`,
+      type,
+      severity: d.severity,
+      confidence: d.confidence,
+      element: d.elementText ?? "Detected element",
+      explanation: d.explanation,
+      whyItMatters: WHY_IT_MATTERS[type],
+      feedback: d.elementText ? { patternType: d.patternType, evidence: d.elementText } : undefined,
+    };
+  });
 
 const perception: PerceptionData = {
     url: res.url,

@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api";
+import { WHY_IT_MATTERS } from "@/lib/constants";
 import { useAgentStore } from "@/stores/agent-store";
 import type {
   AgentEvent,
@@ -72,14 +73,29 @@ const SESSION_STATUS_MAP: Record<string, AgentStatus> = {
   idle: "idle",
 };
 
+/**
+ * Backend `pattern_type` (snake_case, 13 types per `src/types/database.ts`) →
+ * UI `PatternType` (kebab-case). Keep every server type listed here; the
+ * fallback below is only for a truly unknown type arriving from an older
+ * backend or a stale graph seed.
+ */
 export const PATTERN_TYPE_MAP: Record<string, PatternType> = {
   confirmshaming: "confirmshaming",
   forced_continuity: "forced-continuity",
   roach_motel: "roach-motel",
   drip_pricing: "drip-pricing",
   basket_sneaking: "basket-sneaking",
+  false_urgency: "false-urgency",
   misdirection: "misdirection",
+  hidden_costs: "hidden-costs",
+  nagging: "nagging",
+  forced_action: "forced-action",
+  subscription_trap: "subscription-trap",
+  urgency: "urgency",
+  disguised_ads: "disguised-ads",
+  // Legacy aliases (older seeds / DB rows before the taxonomy grew):
   hard_to_cancel: "hard-to-cancel",
+  subscription_trap_old: "subscription-trap",
 };
 
 export interface StartAgentInput {
@@ -132,15 +148,15 @@ export function mapEvent(ev: BackendEvent): AgentEvent {
 }
 
 export function mapDetection(d: BackendDetection): DarkPattern {
+  const type = PATTERN_TYPE_MAP[d.patternType] ?? "hard-to-cancel";
   return {
     id: d.id,
-    type: PATTERN_TYPE_MAP[d.patternType] ?? "hard-to-cancel",
+    type,
     severity: d.severity,
     confidence: d.confidence,
     element: d.elementText ?? "Detected element",
     explanation: d.explanation,
-    whyItMatters:
-      "The agent flags this so you can make an informed decision before anything is submitted.",
+    whyItMatters: WHY_IT_MATTERS[type],
   };
 }
 
