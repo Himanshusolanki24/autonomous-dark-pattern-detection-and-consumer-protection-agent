@@ -55,6 +55,51 @@ function initialState(input: StartRunInput): AgentState {
   };
 }
 
+/**
+ * Mirror a run's terminal (or paused) state onto the cancellation task the API
+ * route created for it. Without this the task row stays "running" forever
+ * (G8), and the Tasks page never reflects what actually happened.
+ */
+async function persistTaskOutcome(state: AgentState): Promise<void> {
+  if (!state.taskId) return;
+  const tasks = createAdminClient().from("cancellation_tasks");
+  const now = new Date().toISOString();
+  // Keep failure reasons bounded — error messages can embed page dumps.
+  const reason = (state.errorMessage ?? "").slice(0, 500) || null;
+  const link = { agent_session_id: state.sessionId };
+
+  // A human declining the final step ended the run; the task did not "fail".
+  // Only the agent giving up is a failure.
+  const userDeclined = state.status === "failed" && state.resumeApproval === "rejected";
+
+  switch (userDeclined ? "cancelled" : state.status) {
+    case "completed":
+      await tasks
+        .update({ ...link, status: "completed", completed_at: now, failure_reason: null })
+        .eq("id", state.taskId);
+      break;
+    case "failed":
+      await tasks
+        .update({ ...link, status: "failed", completed_at: now, failure_reason: reason })
+        .eq("id", state.taskId);
+      break;
+    case "cancelled":
+      // /stop already wrote cancelled; this keeps it consistent if it didn't.
+      await tasks
+        .update({ ...link, status: "cancelled", completed_at: now, failure_reason: null })
+        .eq("id", state.taskId);
+      break;
+    case "approval_required":
+      await tasks
+        .update({ ...link, status: "approval_required", approval_requested_at: now })
+        .eq("id", state.taskId);
+      break;
+    default:
+      // "running" — nothing to change.
+      break;
+  }
+}
+
 async function persistFinalState(sessionId: string, state: AgentState): Promise<void> {
   await createAdminClient()
     .from("agent_sessions")
@@ -67,6 +112,7 @@ async function persistFinalState(sessionId: string, state: AgentState): Promise<
           : null,
     })
     .eq("id", sessionId);
+  await persistTaskOutcome(state);
 }
 
 /**
