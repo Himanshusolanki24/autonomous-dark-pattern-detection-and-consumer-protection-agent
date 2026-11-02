@@ -2,16 +2,17 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { confidencePct } from "@/lib/confidence";
 
 interface ConfidenceBarProps {
-  /** 0–1 fraction (backend) or 0–100 percent (demo data); both are accepted. */
+  /** Canonical 0–1 fraction. Values >1 are saturated and render as 100%. */
   confidence: number;
   tone?: "warning" | "danger" | "brand" | "success";
   className?: string;
 }
 
 function ConfidenceBar({ confidence, tone = "warning", className }: ConfidenceBarProps) {
-  const pct = Math.round(confidence <= 1 ? confidence * 100 : confidence);
+  const pct = confidencePct(confidence);
   const barClass =
     tone === "danger"
       ? "bg-red-600"

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PATTERN_LABELS } from "@/lib/constants";
 import { ConfidenceBar } from "@/components/ui/confidence-bar";
+import { CONFIDENCE_TIER_LABEL, confidenceTier } from "@/lib/confidence";
 
 interface EvidenceDrawerProps {
   isOpen: boolean;
@@ -85,7 +86,7 @@ export function EvidenceDrawer({
               </p>
               <ConfidenceBar confidence={pattern.confidence} className="w-48" />
               <p className="mt-1 text-sm text-zinc-500">
-                {pattern.confidence >= 80 ? "High" : pattern.confidence >= 60 ? "Medium" : "Low"}
+                {CONFIDENCE_TIER_LABEL[confidenceTier(pattern.confidence)]} confidence
               </p>
             </div>
 
