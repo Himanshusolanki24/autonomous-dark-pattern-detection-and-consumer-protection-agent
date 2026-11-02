@@ -1,5 +1,7 @@
 # TrapKiller — Dark Pattern Trap Killer
 
+[![CI](https://github.com/Himanshusolanki24/autonomous-dark-pattern-detection-and-consumer-protection-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Himanshusolanki24/autonomous-dark-pattern-detection-and-consumer-protection-agent/actions/workflows/ci.yml)
+
 An AI agent for consumer protection. It scans subscription and checkout pages for dark patterns, walks the cancellation flow for you while stepping around retention traps, **stops for your approval before the final irreversible click**, and saves a screenshot as proof.
 
 It is a single Next.js app: the UI, the API and the agent engine run together, so there is one install and one dev server. It works with no external services (an in-memory dev store stands in for Supabase).
