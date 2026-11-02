@@ -28,7 +28,14 @@ export type PatternType =
   | "drip-pricing"
   | "basket-sneaking"
   | "misdirection"
-  | "hard-to-cancel";
+  | "hard-to-cancel"
+  | "false-urgency"
+  | "urgency"
+  | "nagging"
+  | "subscription-trap"
+  | "hidden-costs"
+  | "disguised-ads"
+  | "forced-action";
 
 export type BrowserScreen =
   | "plans"
