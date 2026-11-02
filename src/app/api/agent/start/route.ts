@@ -70,6 +70,13 @@ export const POST = api(async (req: Request) => {
     .single();
   if (sessionErr) throw sessionErr;
 
+  // Link the task to its agent session so /cancellations/[id]/stop can stop
+  // the run and the runner can update this task when the run ends.
+  await supabase
+    .from("cancellation_tasks")
+    .update({ agent_session_id: session.id })
+    .eq("id", task.id);
+
   await emitEvent(supabase, session.id, {
     userId: user.id,
     agent: "perception",
