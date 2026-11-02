@@ -1,0 +1,48 @@
+# =============================================================================
+# CI — quality gates on every push to main and every pull request.
+# CD is already handled by Vercel (auto-deploys main, see vercel.json); this
+# workflow keeps broken code from ever landing: typecheck → lint → build → test.
+# All steps are env-free on purpose — the app runs on its in-memory dev store
+# in CI, mirroring the local experience.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck, lint, build, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
