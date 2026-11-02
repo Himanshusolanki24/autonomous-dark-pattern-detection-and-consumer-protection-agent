@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Next 16 generates route types (LayoutProps) at build/dev time into
+      # .next/types — typecheck needs them before the build produces them.
+      - name: Generate route types
+        run: npx next typegen
+
       - name: Typecheck
         run: npm run typecheck
 
