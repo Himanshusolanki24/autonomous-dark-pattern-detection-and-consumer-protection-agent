@@ -33,10 +33,16 @@ const GUILT_LANGUAGE = [
   "really sure",
   "sorry to see you go",
   "we'll miss you",
+  "we will miss you",
   "you will lose",
   "you'll lose",
+  "don't lose",
   "you don't want to miss",
   "last chance",
+  "don't leave yet",
+  "don't throw away",
+  "all your data will be lost",
+  "so sad to see",
 ];
 
 const RETENTION_OFFER = [
@@ -47,15 +53,31 @@ const RETENTION_OFFER = [
   "we have an offer",
   "before you go",
   "pause for 1 month",
+  "1 month free",
+  "one month free",
+  "3 months free",
+  "pause instead",
+  "pause your membership",
+  "we'll pause",
+  "stay and save",
+  "come back anytime",
+  "exclusive offer",
 ];
 
 const AUTO_RENEW = [
   "renews automatically",
   "auto-renews",
   "auto renew",
+  "automatically renew",
+  "billed automatically",
+  "automatically charged",
   "will be charged",
   "free trial",
   "trial ends",
+  "your free trial ends",
+  "converts to a paid",
+  "until you cancel",
+  "auto-billing",
 ];
 
 const FALSE_URGENCY = [
@@ -64,16 +86,142 @@ const FALSE_URGENCY = [
   "countdown",
   "limited time",
   "expires in",
+  "almost gone",
+  "selling fast",
+  "high demand",
+  "hurry",
+  "don't miss out",
+  "limited spots",
+  "a few remaining",
+  "stock is low",
+  "last few",
+  "ends tonight",
+  "today only",
+  "while supplies last",
+  "people are viewing",
 ];
 
-const HIDDEN_CANCEL = ["cancel membership", "cancel subscription", "unsubscribe"];
+const HIDDEN_CANCEL = [
+  "cancel membership",
+  "cancel subscription",
+  "cancel your membership",
+  "cancel your plan",
+  "cancel plan",
+  "end membership",
+  "end my membership",
+  "manage subscription",
+  "turn off auto-renew",
+  "unsubscribe",
+];
 
-/** The heuristic phrase lists by pattern — seeded into the knowledge graph. */
+/** Fees revealed progressively — searched in page text only. */
+const DRIP_PRICING = [
+  "service fee",
+  "processing fee",
+  "convenience fee",
+  "handling fee",
+  "equipment fee",
+  "restocking fee",
+  "billed separately",
+  "excludes taxes",
+  "excluding taxes",
+  "plus taxes and fees",
+  "additional fees apply",
+  "fees may apply",
+  "extra charges apply",
+];
+
+/** Costs held back until a late step. */
+const HIDDEN_COSTS = [
+  "additional charges at checkout",
+  "taxes calculated at checkout",
+  "will be added to your bill",
+  "added at checkout",
+  "will be charged extra",
+  "not included in the listed price",
+  "fees revealed only at checkout",
+];
+
+/** Extra items that appear in the order without an explicit opt-in. */
+const BASKET_SNEAKING = [
+  "added to your cart",
+  "pre-selected",
+  "preselected",
+  "already added to",
+  "we've added",
+  "included by default",
+];
+
+/** Repeated interruptive prompts that derail the user's task. */
+const NAGGING = [
+  "don't forget to",
+  "we noticed you left",
+  "your cart misses you",
+  "are you still there",
+  "come back to",
+  "still thinking it over",
+  "we saved your cart",
+  "abandoned your",
+];
+
+/** Ads styled as neutral content or interface. */
+const DISGUISED_ADS = [
+  "sponsored",
+  "promoted",
+  "paid partnership",
+  "advertisement",
+  "branded content",
+  "native ad",
+  "contains ads",
+];
+
+/** An unrelated action demanded to finish the user's actual task. */
+const FORCED_ACTION = [
+  "to continue, subscribe",
+  "sign up for our newsletter to",
+  "must complete a survey",
+  "complete a survey to",
+  "to proceed, share",
+  "share this on social media to",
+  "follow us to continue",
+  "to finish, sign up",
+  "leave a 5-star rating to",
+];
+
+/** Subscription terms that make leaving costly or slow. */
+const SUBSCRIPTION_TRAP = [
+  "cancellation fee",
+  "early termination fee",
+  "early cancellation fee",
+  "minimum term",
+  "month commitment",
+  "12-month commitment",
+  "lock in your price",
+  "locked into a contract",
+  "cannot be cancelled online",
+  "no online cancellation",
+  "call us to cancel",
+  "must call to cancel",
+];
+
+/**
+ * The heuristic phrase lists by pattern — seeded into the knowledge graph
+ * (`npm run graph:seed`) so the graph knows every phrase the heuristics can
+ * fire on. `urgency` and `misdirection` have no phrase lists; they are found
+ * by the neural head and the LLM pass only.
+ */
 export const SEED_INDICATORS: Partial<Record<PatternType, string[]>> = {
   confirmshaming: GUILT_LANGUAGE,
   forced_continuity: [...AUTO_RENEW, ...RETENTION_OFFER],
   false_urgency: FALSE_URGENCY,
   roach_motel: HIDDEN_CANCEL,
+  drip_pricing: DRIP_PRICING,
+  hidden_costs: HIDDEN_COSTS,
+  basket_sneaking: BASKET_SNEAKING,
+  nagging: NAGGING,
+  disguised_ads: DISGUISED_ADS,
+  forced_action: FORCED_ACTION,
+  subscription_trap: SUBSCRIPTION_TRAP,
 };
 
 const em = (s: string) => s.toLowerCase();
@@ -177,8 +325,83 @@ export function heuristicClassify(perception: PerceptionResult): DarkPatternDete
     });
   }
 
+  // Phrase-table detectors (drip pricing, hidden costs, nagging, …). One
+  // finding per type; confidence/severity come from that type's taxonomy.
+  for (const rule of PHRASE_RULES) {
+    const haystacks = rule.inElements ? [text, ...signals] : [text];
+    const hits = rule.phrases.filter((p) => haystacks.some((h) => h.includes(p)));
+    if (hits.length === 0) continue;
+    const def = patternDefinition(rule.type);
+    const el = rule.inElements ? findInElements(perception, rule.phrases) : null;
+    detections.push({
+      patternType: rule.type,
+      severity: def.defaultSeverity,
+      confidence: boost(def.baseConfidence, hits.length),
+      elementText: el?.text ?? hits[0],
+      elementRole: el?.role ?? "text",
+      explanation: rule.explanation,
+    });
+  }
+
   return dedupe(detections);
 }
+
+/**
+ * Phrase-table detectors that run in addition to the structural rules above
+ * (confirmshaming, retention, roach motel). Confidence and severity come from
+ * the taxonomy entry for the type, so new rules only need phrases here.
+ * `inElements: false` → searched in page text only (these phrases read like
+ * copy, not like a button label).
+ */
+const PHRASE_RULES: Array<{
+  type: PatternType;
+  phrases: string[];
+  inElements: boolean;
+  explanation: string;
+}> = [
+  {
+    type: "drip_pricing",
+    phrases: DRIP_PRICING,
+    inElements: false,
+    explanation: "Fees are revealed progressively, so the final total surprises the user.",
+  },
+  {
+    type: "hidden_costs",
+    phrases: HIDDEN_COSTS,
+    inElements: false,
+    explanation: "Costs are held back until a late step of the flow.",
+  },
+  {
+    type: "basket_sneaking",
+    phrases: BASKET_SNEAKING,
+    inElements: true,
+    explanation: "Extra items or add-ons are added to the order without explicit consent.",
+  },
+  {
+    type: "nagging",
+    phrases: NAGGING,
+    inElements: true,
+    explanation: "Repeated prompts interrupt the user's task to push an unrelated decision.",
+  },
+  {
+    type: "disguised_ads",
+    phrases: DISGUISED_ADS,
+    inElements: true,
+    explanation: "Advertising is styled as neutral content or native UI.",
+  },
+  {
+    type: "forced_action",
+    phrases: FORCED_ACTION,
+    inElements: true,
+    explanation: "An unrelated action is required to complete the user's actual task.",
+  },
+  {
+    type: "subscription_trap",
+    phrases: SUBSCRIPTION_TRAP,
+    inElements: true,
+    explanation: "Subscription terms make cancelling costly, slow, or off-platform.",
+  },
+];
 
 function dedupe(list: DarkPatternDetection[]): DarkPatternDetection[] {
   const seen = new Set<PatternType>();
