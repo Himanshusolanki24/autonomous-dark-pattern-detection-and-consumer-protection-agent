@@ -59,6 +59,7 @@ export interface DarkPattern {
   id: string;
   type: PatternType;
   severity: Severity;
+  /** Canonical 0–1 fraction (what the backend emits). Display via confidencePct(). */
   confidence: number;
   element: string;
   explanation: string;

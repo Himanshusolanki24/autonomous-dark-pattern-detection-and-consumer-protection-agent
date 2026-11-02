@@ -29,7 +29,7 @@ const patterns: DarkPattern[] = [
     id: "pat_roach",
     type: "roach-motel",
     severity: "high",
-    confidence: 91,
+    confidence: 0.91,
     element: "Cancellation flow",
     explanation:
       "The user can enter the cancellation process easily, but the exit path is intentionally difficult to locate.",
@@ -40,7 +40,7 @@ const patterns: DarkPattern[] = [
     id: "pat_confirm",
     type: "confirmshaming",
     severity: "high",
-    confidence: 94,
+    confidence: 0.94,
     element: "Cancellation option",
     explanation:
       "The cancellation option uses guilt-inducing language to discourage the user from declining the offer.",
@@ -51,7 +51,7 @@ const patterns: DarkPattern[] = [
     id: "pat_retention",
     type: "hard-to-cancel",
     severity: "medium",
-    confidence: 87,
+    confidence: 0.87,
     element: "Retention offer step",
     explanation:
       "A forced retention offer interrupts the cancellation flow and attempts to reverse the user's decision.",
@@ -231,13 +231,13 @@ export class DemoSimulator {
           this.stage("detection", "completed");
           this.event(
             makeEvent("detection", "Detected ROACH MOTEL", "warning", {
-              confidence: 91,
+              confidence: 0.91,
               severity: "high",
             })
           );
           this.event(
             makeEvent("detection", "Detected CONFIRMSHAMING", "warning", {
-              confidence: 94,
+              confidence: 0.94,
               severity: "high",
             })
           );
@@ -310,7 +310,7 @@ export class DemoSimulator {
             title: "Wait, keep your membership",
             screen: "retention",
           });
-          this.event(makeEvent("detection", "Detected retention offer", "warning", { confidence: 87 }));
+          this.event(makeEvent("detection", "Detected retention offer", "warning", { confidence: 0.87 }));
         },
       },
 

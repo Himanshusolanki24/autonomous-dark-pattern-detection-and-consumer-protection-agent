@@ -3,9 +3,11 @@
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import type { PatternType } from "@/lib/types";
+import { confidencePct } from "@/lib/confidence";
 
 interface DarkPatternHighlightProps {
   patternType: PatternType;
+  /** Canonical 0–1 fraction. */
   confidence: number;
   label: string;
   children: React.ReactNode;
@@ -43,7 +45,7 @@ export function DarkPatternHighlight({
         className="pointer-events-none absolute -top-2.5 right-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shadow-sm"
       >
         <AlertTriangle className="h-3 w-3" />
-        {label} · {confidence}%
+        {label} · {confidencePct(confidence)}%
       </motion.span>
     </motion.div>
   );

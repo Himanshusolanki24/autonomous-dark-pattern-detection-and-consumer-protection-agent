@@ -26,7 +26,7 @@ export const demoPatterns: DarkPattern[] = [
     id: "pat_confirm",
     type: "confirmshaming",
     severity: "high",
-    confidence: 94,
+    confidence: 0.94,
     element: "Cancellation option",
     explanation:
       "The cancellation option uses guilt-inducing language to discourage the user from declining the offer.",
@@ -37,7 +37,7 @@ export const demoPatterns: DarkPattern[] = [
     id: "pat_roach",
     type: "roach-motel",
     severity: "high",
-    confidence: 91,
+    confidence: 0.91,
     element: "Cancellation flow",
     explanation:
       "The user can enter the cancellation process easily, but the exit path is intentionally difficult to locate.",

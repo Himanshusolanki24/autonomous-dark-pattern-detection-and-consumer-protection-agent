@@ -161,7 +161,7 @@ function AccountPage({ onElementClick }: { onElementClick?: (p: PatternType) => 
             <p className="text-sm font-medium text-zinc-700">Cancel Membership</p>
             <p className="text-xs text-zinc-500">Access continues until end of billing period.</p>
           </div>
-          <DarkPatternHighlight patternType="roach-motel" confidence={91} label="Hard to find" onClick={onElementClick}>
+          <DarkPatternHighlight patternType="roach-motel" confidence={0.91} label="Hard to find" onClick={onElementClick}>
             <DemoButton variant="muted">Cancel</DemoButton>
           </DarkPatternHighlight>
         </div>
@@ -180,7 +180,7 @@ function CancelPage({ onElementClick }: { onElementClick?: (p: PatternType) => v
           <p className="text-sm font-medium text-zinc-800">Keep My Premium Benefits</p>
           <p className="mt-0.5 text-xs text-zinc-500">Continue watching in 4K on 4 screens, ad-free.</p>
         </div>
-        <DarkPatternHighlight patternType="confirmshaming" confidence={94} label="Guilt language" onClick={onElementClick}>
+        <DarkPatternHighlight patternType="confirmshaming" confidence={0.94} label="Guilt language" onClick={onElementClick}>
           <button type="button" tabIndex={-1} className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left">
             <p className="text-sm font-medium text-zinc-400">No, I don&apos;t want to keep my benefits</p>
             <p className="mt-0.5 text-xs text-zinc-300">Continue to cancellation — you&apos;ll lose access.</p>
