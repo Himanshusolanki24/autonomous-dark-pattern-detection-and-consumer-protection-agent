@@ -78,8 +78,8 @@ function wire(x1: number, y1: number, x2: number, y2: number) {
 }
 
 const OWNER_TONE: Record<Owner, string> = {
-  TinyFish: "bg-[#ff7a45]/15 text-[#ff9a6e]",
-  "TrapKiller AI": "bg-marker/15 text-marker",
+  TinyFish: "bg-orange-400/15 text-orange-300",
+  "TrapKiller AI": "bg-indigo-400/15 text-indigo-300",
   You: "bg-emerald-400/15 text-emerald-300",
 };
 
@@ -92,7 +92,7 @@ function Port({ x, y, on }: { x: number; y: number; on: boolean }) {
     <span
       className={cn(
         "absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors duration-500",
-        on ? "border-marker bg-marker shadow-[0_0_12px_rgba(255,225,90,0.6)]" : "border-[#0e1220] bg-white/80"
+        on ? "border-marker bg-marker shadow-[0_0_12px_rgba(255,213,74,0.6)]" : "border-[#0b1220] bg-white/80"
       )}
       style={{ left: x, top: y }}
       aria-hidden="true"
@@ -105,8 +105,8 @@ function NodeCard({ node, x, y, on, waiting }: { node: MapNode; x: number; y: nu
   return (
     <div
       className={cn(
-        "absolute rounded-2xl border bg-[#161b2b] p-4 transition-all duration-500",
-        on ? "border-marker/50 opacity-100" : waiting ? "border-white/5 opacity-45" : "border-white/10 opacity-90"
+        "absolute rounded-2xl border bg-[#141b2d] p-4 transition-all duration-500",
+        on ? "border-marker/40 opacity-100" : waiting ? "border-white/5 opacity-45" : "border-white/10 opacity-90"
       )}
       style={{ left: x, top: y, width: CARD_W, height: CARD_H }}
     >
@@ -119,7 +119,7 @@ function NodeCard({ node, x, y, on, waiting }: { node: MapNode; x: number; y: nu
       <p className="mt-2 truncate font-mono text-[12px] text-white/85">{node.line}</p>
       <p className="mt-0.5 truncate text-[11.5px] text-white/45">{node.sub}</p>
       {node.port ? (
-        <p className="absolute bottom-3 right-6 text-[11.5px] text-white/50">{node.port}</p>
+        <p className="absolute bottom-3 right-6 font-mono text-[11px] text-white/50">{node.port}</p>
       ) : (
         <p className="absolute bottom-3 left-4 flex items-center gap-1.5 text-[11.5px] text-white/45">
           <span className={cn("h-1.5 w-1.5 rounded-full", on ? "bg-marker" : "bg-white/30")} />
@@ -149,16 +149,17 @@ export function SystemMap() {
   const current = Math.max(0, Math.min(step, STEPS) - 1);
 
   return (
-    <section id="system" className="scroll-mt-8 bg-[#0e1220] text-white" aria-labelledby="system-title">
+    <section id="system" className="scroll-mt-8 bg-foreground text-white" aria-labelledby="system-title">
       <div className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8">
-        <h2 id="system-title" className="max-w-2xl text-[34px] font-bold leading-tight sm:text-[40px]">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-white/40">System schematic</p>
+        <h2 id="system-title" className="font-display mt-3 max-w-2xl text-[32px] font-bold leading-tight sm:text-[40px]">
           How the system fits together
         </h2>
         <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-white/65">
           TinyFish gives the agent the live web. TrapKiller&rsquo;s AI decides what is a trap. You make the final
           call.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3 text-[12.5px] text-white/60">
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3 text-[12.5px] text-white/60">
           {(["TinyFish", "TrapKiller AI", "You"] as Owner[]).map((o) => (
             <span key={o} className="flex items-center gap-2">
               <OwnerChip owner={o} />
@@ -171,7 +172,7 @@ export function SystemMap() {
           {/* Desktop: the node graph */}
           <div className="mt-10 hidden overflow-x-auto lg:block">
             <div
-              className="relative mx-auto rounded-2xl border border-white/10"
+              className="relative mx-auto rounded-2xl border border-white/10 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)]"
               style={{
                 width: W,
                 height: H,
@@ -185,11 +186,11 @@ export function SystemMap() {
                   const d = wire(LEFT_X + CARD_W, COL_Y[i] + CARD_H - 22, CENTER.x, ROW_Y[i]);
                   return (
                     <g key={`in${i}`}>
-                      <path d={d} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={1.5} strokeDasharray="4 5" />
+                      <path d={d} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={1.5} strokeDasharray="4 5" />
                       <motion.path
                         d={d}
                         fill="none"
-                        stroke="#ffe15a"
+                        stroke="#ffd54a"
                         strokeWidth={2.5}
                         initial={false}
                         animate={{ pathLength: step > i ? 1 : 0, opacity: step > i ? 1 : 0 }}
@@ -203,11 +204,11 @@ export function SystemMap() {
                   const on = step > 4 + i;
                   return (
                     <g key={`out${i}`}>
-                      <path d={d} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={1.5} strokeDasharray="4 5" />
+                      <path d={d} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={1.5} strokeDasharray="4 5" />
                       <motion.path
                         d={d}
                         fill="none"
-                        stroke="#ffe15a"
+                        stroke="#ffd54a"
                         strokeWidth={2.5}
                         initial={false}
                         animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }}
@@ -228,17 +229,17 @@ export function SystemMap() {
               {/* Centre: the agent, filling up as its inputs arrive */}
               <div
                 className={cn(
-                  "absolute rounded-2xl border bg-[#1b2133] p-2 transition-colors duration-500",
-                  filled === 4 ? "border-marker/60" : "border-white/15"
+                  "absolute rounded-2xl border bg-[#1a2235] p-2 transition-colors duration-500",
+                  filled === 4 ? "border-marker/60 shadow-[0_0_40px_-12px_rgba(255,213,74,0.4)]" : "border-white/15"
                 )}
                 style={{ left: CENTER.x, top: CENTER.y, width: CENTER.w, height: 324 }}
               >
                 <div className="flex items-center gap-2 px-3 pt-2">
                   <ShieldAlert className="h-4 w-4 text-marker" aria-hidden="true" />
                   <p className="text-[15px] font-bold">TrapKiller agent</p>
-                  <span className="text-[11.5px] text-white/45">LangGraph</span>
+                  <span className="font-mono text-[10.5px] text-white/45">LangGraph</span>
                 </div>
-                <div className="mt-3 rounded-xl bg-[#0e1220]/70 py-1">
+                <div className="mt-3 rounded-xl bg-[#0b1220]/70 py-1">
                   {ROWS.map((r, i) => (
                     <div key={r} className="flex h-[58px] items-center justify-between px-5 text-[14px]">
                       <span className={step > i ? "text-white" : "text-white/45"}>{r}</span>
@@ -276,8 +277,8 @@ export function SystemMap() {
             {[...INPUTS, ...OUTPUTS].map((n, i) => {
               const Icon = n.icon;
               return (
-                <li key={n.title} className={cn("flex gap-3 rounded-2xl border p-4 transition-colors", step > i ? "border-marker/40 bg-[#161b2b]" : "border-white/10 bg-[#161b2b]/60")}>
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", step > i ? "bg-marker text-[#0e1220]" : "bg-white/10 text-white/70")}>
+                <li key={n.title} className={cn("flex gap-3 rounded-2xl border p-4 transition-colors", step > i ? "border-marker/40 bg-[#141b2d]" : "border-white/10 bg-[#141b2d]/60")}>
+                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", step > i ? "bg-marker text-foreground" : "bg-white/10 text-white/70")}>
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
@@ -293,8 +294,8 @@ export function SystemMap() {
 
           {/* Narration: one plain sentence for the step that just lit up */}
           <div className="mt-6 hidden items-start justify-between gap-6 lg:flex">
-            <p className="max-w-3xl text-[16px] leading-relaxed text-white/85" aria-live="polite">
-              <span className="mr-3 font-mono text-[13px] text-marker">
+            <p className="max-w-3xl text-[15.5px] leading-relaxed text-white/85" aria-live="polite">
+              <span className="mr-3 font-mono text-[12.5px] text-marker">
                 {step === 0 ? "0" : Math.min(step, STEPS)}/{STEPS}
               </span>
               {step === 0 ? "Watch one scan and cancellation go through the system." : NARRATION[current]}
@@ -302,7 +303,7 @@ export function SystemMap() {
             <button
               type="button"
               onClick={() => setPlayed(0)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[13px] text-white/75 hover:border-white/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marker"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[13px] text-white/75 transition-colors hover:border-white/40 hover:text-white focus-visible:outline-none"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Replay
             </button>
