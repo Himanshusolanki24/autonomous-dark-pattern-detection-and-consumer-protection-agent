@@ -42,7 +42,7 @@ export function DarkPatternHighlight({
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-        className="pointer-events-none absolute -top-2.5 right-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shadow-sm"
+        className="pointer-events-none absolute -top-2.5 right-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-marker px-2 py-0.5 text-[10px] font-bold text-foreground shadow-sm"
       >
         <AlertTriangle className="h-3 w-3" />
         {label} · {confidencePct(confidence)}%

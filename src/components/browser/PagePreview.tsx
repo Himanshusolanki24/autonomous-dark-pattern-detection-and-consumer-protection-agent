@@ -17,11 +17,11 @@ export function LiveShot({ url, isScanning }: { url: string; isScanning?: boolea
   const src = `${BACKEND_URL}/api/scanner/screenshot?url=${encodeURIComponent(url)}`;
 
   return (
-    <div className="relative min-h-[420px] bg-white">
+    <div className="relative min-h-[420px] bg-surface">
       {state === "loading" && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white text-zinc-400">
-          <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
-          <p className="text-xs">Rendering {url}…</p>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-surface text-zinc-400">
+          <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-brand" />
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.12em]">Rendering {url}…</p>
         </div>
       )}
       {state === "error" ? (
@@ -45,11 +45,11 @@ export function LiveShot({ url, isScanning }: { url: string; isScanning?: boolea
           initial={{ top: "0%" }}
           animate={{ top: "100%" }}
           transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none absolute left-0 z-50 h-[3px] w-full bg-marker shadow-[0_0_14px_4px_rgba(255,225,90,0.7)]"
+          className="pointer-events-none absolute left-0 z-50 h-[3px] w-full bg-brand shadow-[0_0_16px_4px_rgba(79,70,229,0.45)]"
         />
       )}
-      <p className="border-t border-zinc-100 px-3 py-1.5 text-[10px] text-zinc-400">
-        Server-rendered snapshot of the top of the target page.
+      <p className="border-t border-border bg-surface px-3 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-zinc-400">
+        Server-rendered snapshot of the top of the target page
       </p>
     </div>
   );
@@ -64,14 +64,14 @@ export function LiveShot({ url, isScanning }: { url: string; isScanning?: boolea
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[420px] flex-col bg-zinc-50 text-zinc-900">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-2.5">
-        <span className="text-sm font-bold tracking-tight">
-          stream<span className="text-blue-600">flow</span>
+      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2.5">
+        <span className="font-display text-sm font-bold tracking-tight">
+          stream<span className="text-brand">flow</span>
         </span>
         <nav className="flex items-center gap-4 text-xs text-zinc-600">
           <span className="hidden sm:inline">Browse</span>
           <span className="hidden sm:inline">My List</span>
-          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] text-white">
+          <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] text-white">
             Account ▾
           </span>
         </nav>
@@ -94,7 +94,7 @@ function DemoButton({
       tabIndex={-1}
       className={cn(
         "pointer-events-none rounded-md text-sm font-medium",
-        variant === "primary" && "bg-blue-600 px-4 py-2 text-white",
+        variant === "primary" && "bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2 text-white shadow-[0_8px_16px_-10px_rgba(79,70,229,0.8)]",
         variant === "ghost" && "border border-zinc-300 px-4 py-2 text-zinc-700",
         variant === "muted" && "px-2 py-1 text-xs text-zinc-400 underline decoration-dotted underline-offset-2"
       )}
@@ -107,7 +107,7 @@ function DemoButton({
 function PlansPage() {
   return (
     <div className="mx-auto max-w-lg">
-      <h2 className="text-lg font-semibold">Choose a plan</h2>
+      <h2 className="font-display text-lg font-semibold">Choose a plan</h2>
       <p className="mt-1 text-sm text-zinc-500">Select the plan that works best for you.</p>
       <div className="mt-4 grid gap-3">
         {[
@@ -138,7 +138,7 @@ function PlansPage() {
 function AccountPage({ onElementClick }: { onElementClick?: (p: PatternType) => void }) {
   return (
     <div className="mx-auto max-w-md">
-      <h2 className="text-lg font-semibold">Account</h2>
+      <h2 className="font-display text-lg font-semibold">Account</h2>
       <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4">
         <p className="text-xs uppercase tracking-wide text-zinc-400">Membership</p>
         <p className="mt-1 text-sm font-medium">Premium · 4K</p>
@@ -173,7 +173,7 @@ function AccountPage({ onElementClick }: { onElementClick?: (p: PatternType) => 
 function CancelPage({ onElementClick }: { onElementClick?: (p: PatternType) => void }) {
   return (
     <div className="mx-auto max-w-md">
-      <h2 className="text-lg font-semibold">Cancel Membership</h2>
+      <h2 className="font-display text-lg font-semibold">Cancel Membership</h2>
       <p className="mt-1 text-sm text-zinc-500">We&apos;d hate to see you go.</p>
       <div className="mt-5 space-y-3">
         <div className="rounded-lg border-2 border-blue-500 bg-white p-4 shadow-sm">
@@ -194,7 +194,7 @@ function CancelPage({ onElementClick }: { onElementClick?: (p: PatternType) => v
 function RetentionPage() {
   return (
     <div className="mx-auto max-w-md">
-      <h2 className="text-lg font-semibold">Wait — don&apos;t go yet</h2>
+      <h2 className="font-display text-lg font-semibold">Wait — don&apos;t go yet</h2>
       <p className="mt-1 text-sm text-zinc-500">We have an offer for you:</p>
       <div className="mt-4 space-y-3">
         <div className="rounded-lg border border-blue-500 bg-white p-4">
@@ -215,7 +215,7 @@ function RetentionPage() {
 function ConfirmPage() {
   return (
     <div className="mx-auto max-w-md">
-      <h2 className="text-lg font-semibold">Confirm Cancellation</h2>
+      <h2 className="font-display text-lg font-semibold">Confirm Cancellation</h2>
       <p className="mt-1 text-sm text-zinc-500">Your Premium membership will end today.</p>
       <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4">
         <p className="text-xs uppercase tracking-wide text-zinc-400">Summary</p>
@@ -241,7 +241,7 @@ function SuccessPage() {
           <path d="M20 6 9 17l-5-5" />
         </svg>
       </div>
-      <h2 className="mt-4 text-xl font-semibold">Membership Cancelled</h2>
+      <h2 className="font-display mt-4 text-xl font-semibold">Membership Cancelled</h2>
       <p className="mt-1 text-sm text-zinc-500">Your autopay is off and your cancellation is also done.</p>
       <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-left text-sm">
         <div className="flex justify-between"><span className="text-zinc-500">Plan</span><span>Premium · 4K</span></div>

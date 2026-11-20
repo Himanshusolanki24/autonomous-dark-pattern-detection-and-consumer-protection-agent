@@ -26,7 +26,7 @@ export function BrowserFrame({
   const effUrl = override && override.on === browser.url ? override.url : browser.url;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
       {header}
       <BrowserToolbar key={effUrl} url={effUrl} onNavigate={(u) => setOverride({ on: browser.url, url: normalizeUrl(u) })} />
       <div className="max-h-[520px] overflow-y-auto">
