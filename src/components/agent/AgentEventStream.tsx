@@ -24,7 +24,7 @@ const EventRow = memo(function EventRow({ event, isFirst }: { event: AgentEvent;
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={cn("relative flex gap-3 py-2.5", !isFirst && "border-t border-zinc-100")}
+      className={cn("relative flex gap-3 py-2.5", !isFirst && "border-t border-border/70")}
     >
       <div className="flex shrink-0 flex-col items-center pt-0.5">
         <span className={cn("h-2 w-2 rounded-full shrink-0", tone.dot)} aria-hidden="true" />
@@ -80,9 +80,9 @@ export function AgentEventStream({
       <div className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <Terminal className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />
-          <span className="text-[12px] font-medium text-zinc-400">Event Stream</span>
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-zinc-500">Event stream</span>
           {events.length > 0 && (
-            <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-500">{events.length}</span>
+            <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-zinc-500">{events.length}</span>
           )}
         </div>
         {onCollapse && (

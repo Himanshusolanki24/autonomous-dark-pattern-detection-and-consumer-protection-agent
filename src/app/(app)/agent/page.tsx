@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Loader2, Play, RotateCcw, Square } from "lucide-react";
+import { Check, Globe, Loader2, Play, RotateCcw, Square } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { fetchSession, startPolling, stopSession } from "@/lib/services/agentService";
 import { startCancellation } from "@/lib/services/taskService";
@@ -16,6 +16,7 @@ import { BrowserFrame } from "@/components/browser/BrowserFrame";
 import { AgentDecision } from "@/components/agent/AgentDecision";
 import { Button } from "@/components/ui/button";
 import { Marker, PageHeader, Stamp } from "@/components/ui/case";
+import { Stagger, StaggerItem } from "@/components/ui/motion";
 import { TinyFishAgentPanel } from "@/components/tinyfish/TinyFishAgentPanel";
 
 const STAGE_VERB: Record<AgentId, string> = {
@@ -33,6 +34,12 @@ const EVENT_DOT: Record<string, string> = {
   error: "bg-red-500",
 };
 
+const IDLE_STEPS = [
+  ["It looks", "Reads every button and line of text on the page, like you would."],
+  ["It steps around traps", "Ignores “Keep my benefits” and “pause instead” offers."],
+  ["You decide", "The final irreversible click waits for your approval."],
+] as const;
+
 /** Horizontal case track. The bar fills as stages finish; the current stage is marked. */
 function CaseTrack({ stages, blocked }: { stages: Record<AgentId, StageState>; blocked: boolean }) {
   const done = PIPELINE_ORDER.filter((a) => stages[a] === "completed").length;
@@ -41,9 +48,18 @@ function CaseTrack({ stages, blocked }: { stages: Record<AgentId, StageState>; b
 
   return (
     <div>
+      <div className="flex items-center justify-between pb-2">
+        <p className="eyebrow">Case track</p>
+        <span className="font-mono text-[10px] tabular-nums text-zinc-400">
+          {done}/{PIPELINE_ORDER.length} stages
+        </span>
+      </div>
       <div className="relative h-2 overflow-hidden rounded-full bg-zinc-200">
         <motion.div
-          className={cn("absolute inset-y-0 left-0 w-full origin-left rounded-full", blocked ? "bg-amber-500" : "bg-foreground")}
+          className={cn(
+            "absolute inset-y-0 left-0 w-full origin-left rounded-full",
+            blocked ? "bg-amber-500" : "bg-gradient-to-r from-brand to-signal"
+          )}
           initial={{ scaleX: 0 }}
           animate={{ scaleX: progress }}
           transition={{ type: "spring", stiffness: 60, damping: 18 }}
@@ -53,7 +69,7 @@ function CaseTrack({ stages, blocked }: { stages: Record<AgentId, StageState>; b
         {PIPELINE_ORDER.map((a) => {
           const st = stages[a];
           return (
-            <li key={a} className="text-[13px]">
+            <li key={a} className="text-[12px]">
               <span
                 className={cn(
                   "flex items-center gap-1.5 font-medium",
@@ -68,7 +84,7 @@ function CaseTrack({ stages, blocked }: { stages: Record<AgentId, StageState>; b
                 {st === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
                 {STAGE_VERB[a]}
               </span>
-              {st === "blocked" && <span className="text-[12px] text-amber-700">waiting for you</span>}
+              {st === "blocked" && <span className="text-[11px] text-amber-700">waiting for you</span>}
             </li>
           );
         })}
@@ -91,7 +107,7 @@ function ProofShot({ sessionId }: { sessionId: string }) {
     <img
       src={`${BACKEND_URL}/api/agent/${sessionId}/proof`}
       alt="Screenshot of the cancellation confirmation"
-      className="mt-5 max-h-[340px] w-full max-w-xl rounded-xl border border-border object-cover object-top"
+      className="mt-5 max-h-[340px] w-full max-w-xl rounded-xl border border-border object-cover object-top shadow-card"
       onError={() => setOk(false)}
     />
   );
@@ -217,65 +233,69 @@ function AgentConsole() {
 
   if (isIdle) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-7">
         <PageHeader
+          eyebrow="Field agent"
           title="Send the agent in"
           lede="Give it a cancellation page. It reads each screen, steps around the traps, and asks you before anything that can’t be undone."
         />
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
             startAgent();
           }}
-          className="max-w-2xl rounded-2xl border border-border bg-surface p-6"
+          className="panel relative max-w-2xl overflow-hidden p-6"
         >
-          <label htmlFor="agent-url" className="text-[14px] font-semibold">
+          <span aria-hidden="true" className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+          <label htmlFor="agent-url" className="relative flex items-center gap-2 text-[13px] font-semibold">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-soft text-brand">
+              <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
             Where should it start?
           </label>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="relative mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               id="agent-url"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              className="h-12 flex-1 rounded-xl border border-border-strong bg-background px-4 font-mono text-[13.5px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15"
+              className="h-12 flex-1 rounded-xl border border-border-strong bg-surface px-4 font-mono text-[13px] shadow-[0_1px_2px_rgba(16,24,40,0.03)] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15"
             />
-            <Button type="submit" size="lg" disabled={starting} className="h-12 rounded-xl px-6">
+            <Button type="submit" size="lg" disabled={starting} className="h-12 px-6">
               {starting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
               {starting ? "Starting…" : "Start the agent"}
             </Button>
           </div>
-          <p className="mt-3 text-[13px] text-zinc-500">
+          <p className="relative mt-3 text-[12.5px] text-zinc-500">
             Pre-filled with the StreamVault test site, which has real retention traps to get past.
           </p>
           {error && (
-            <p role="alert" className="mt-3 text-[13.5px] text-red-600">
+            <p role="alert" className="relative mt-3 rounded-lg border border-red-200 bg-danger-soft px-3 py-2 text-[13px] text-red-700">
               {error}
             </p>
           )}
         </form>
-        <ol className="grid max-w-3xl gap-6 sm:grid-cols-3">
-          {[
-            ["It looks", "Reads every button and line of text on the page, like you would."],
-            ["It steps around traps", "Ignores “Keep my benefits” and “pause instead” offers."],
-            ["You decide", "The final irreversible click waits for your approval."],
-          ].map(([t, d], i) => (
-            <li key={t}>
-              <p className="font-display text-[15px] font-bold">
-                <span className="mr-2 text-zinc-400">{i + 1}</span>
-                {t}
-              </p>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-500">{d}</p>
-            </li>
+
+        <Stagger className="grid max-w-3xl gap-3 sm:grid-cols-3">
+          {IDLE_STEPS.map(([t, d], i) => (
+            <StaggerItem key={t}>
+              <div className="panel h-full p-4">
+                <p className="font-mono text-[10px] tabular-nums text-zinc-300">0{i + 1}</p>
+                <p className="font-display mt-2 text-[14.5px] font-semibold">{t}</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-500">{d}</p>
+              </div>
+            </StaggerItem>
           ))}
-        </ol>
+        </Stagger>
         <TinyFishAgentPanel />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
+        eyebrow={isDone ? "Case closed" : isBlocked ? "Approval required" : isFailed ? "Run stopped" : "Live case"}
         title={store.task?.service ?? "Live case"}
         lede={
           isDone
@@ -298,19 +318,26 @@ function AgentConsole() {
         )}
       </PageHeader>
 
-      <CaseTrack stages={store.stageStates} blocked={isBlocked} />
+      <div className="panel p-5">
+        <CaseTrack stages={store.stageStates} blocked={isBlocked} />
+      </div>
 
       <AnimatePresence>
         {isDone && (
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6"
+            className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-b from-success-soft to-surface p-6"
           >
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div
+              aria-hidden="true"
+              className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-300/20 blur-3xl"
+            />
+            <div className="relative flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-display text-[24px] font-bold">Cancellation confirmed</p>
-                <ul className="mt-3 space-y-1.5 text-[14px] text-emerald-900">
+                <p className="eyebrow text-emerald-700">Outcome</p>
+                <p className="font-display mt-1.5 text-[24px] font-bold">Cancellation confirmed</p>
+                <ul className="mt-3 space-y-1.5 text-[13.5px] text-emerald-900">
                   {["Reached the confirmation page", "Found the cancellation message", "Saved a screenshot as proof"].map((t) => (
                     <li key={t} className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" /> {t}
@@ -318,7 +345,7 @@ function AgentConsole() {
                   ))}
                 </ul>
                 {store.verification?.proofId && (
-                  <p className="mt-3 font-mono text-[12px] text-emerald-800/70">proof {store.verification.proofId}</p>
+                  <p className="mt-3 font-mono text-[11px] text-emerald-800/70">proof {store.verification.proofId}</p>
                 )}
               </div>
               <Stamp>Verified</Stamp>
@@ -328,21 +355,26 @@ function AgentConsole() {
         )}
       </AnimatePresence>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
           <BrowserFrame browser={store.browser} />
           {store.patterns.length > 0 && (
-            <div>
-              <h2 className="text-[15px] font-semibold">Traps it caught on the way</h2>
+            <div className="panel p-5">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-display text-[15px] font-semibold">Traps it caught on the way</h2>
+                <span className="rounded-full bg-brand-soft px-2 py-0.5 font-mono text-[10px] font-semibold text-blue-700">
+                  {store.patterns.length}
+                </span>
+              </div>
               <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
                 {store.patterns.map((p, i) => (
-                  <li key={p.id} className="text-[14px]">
+                  <li key={p.id} className="text-[13.5px]">
                     <Marker delay={0.2 + i * 0.12}>{PATTERN_LABELS[p.type] ?? p.type}</Marker>
                   </li>
                 ))}
               </ul>
               {(isDone || isFailed) && (
-                <p className="mt-4 text-[13px] text-zinc-600">
+                <p className="mt-4 text-[12.5px] text-zinc-600">
                   Did it get these right?{" "}
                   <Link href="/learning" className="font-medium text-brand underline underline-offset-2 hover:text-blue-700">
                     Review the findings
@@ -354,17 +386,17 @@ function AgentConsole() {
           )}
         </div>
 
-        <aside aria-label="Case log">
-          <h2 className="flex items-baseline justify-between text-[15px] font-semibold">
-            Case log
-            <span className="text-[12px] font-normal text-zinc-500">{store.events.length} entries</span>
-          </h2>
+        <aside aria-label="Case log" className="panel flex flex-col overflow-hidden">
+          <div className="flex items-baseline justify-between gap-2 border-b border-border px-4 py-3.5">
+            <h2 className="font-display text-[15px] font-semibold">Case log</h2>
+            <span className="font-mono text-[10px] text-zinc-400">{store.events.length} entries</span>
+          </div>
           {store.decision && (
-            <div className="mt-3">
+            <div className="border-b border-border p-3">
               <AgentDecision decision={store.decision} />
             </div>
           )}
-          <ol className="mt-3 max-h-[560px] space-y-0 overflow-y-auto pr-1">
+          <ol className="max-h-[520px] space-y-0 overflow-y-auto p-4">
             <AnimatePresence initial={false}>
               {log.map((e) => (
                 // New entries spring in at the top; older ones slide down to make room.
@@ -374,13 +406,13 @@ function AgentConsole() {
                   initial={{ opacity: 0, y: -14, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                  className="relative border-l border-border py-2.5 pl-5"
+                  className="relative border-l border-border py-2.5 pl-5 first:pt-0"
                 >
-                  <span className={cn("absolute -left-[5px] top-4 h-2.5 w-2.5 rounded-full ring-4 ring-background", EVENT_DOT[e.status])} aria-hidden="true" />
-                  <p className="text-[12px] text-zinc-400">
+                  <span className={cn("absolute -left-[5px] top-4 h-2.5 w-2.5 rounded-full ring-4 ring-surface", EVENT_DOT[e.status])} aria-hidden="true" />
+                  <p className="text-[11px] text-zinc-400">
                     <span className="font-medium text-zinc-600">{AGENT_SHORT[e.agent]}</span> · {formatTime(e.timestamp)}
                   </p>
-                  <p className="mt-0.5 text-[13.5px] leading-snug">{e.message}</p>
+                  <p className="mt-0.5 text-[13px] leading-snug">{e.message}</p>
                 </motion.li>
               ))}
             </AnimatePresence>

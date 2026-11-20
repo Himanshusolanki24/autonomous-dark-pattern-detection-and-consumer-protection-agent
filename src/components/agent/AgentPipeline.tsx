@@ -68,11 +68,11 @@ function StageNode({ agent, state, isLast, compact, index }: StageNodeProps) {
         <div
           className={cn(
             "relative flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all duration-300",
-            isCompleted && "border-emerald-200 bg-emerald-50 text-emerald-600",
-            isRunning  && "border-brand bg-brand-soft text-brand shadow-[0_0_0_4px_rgba(37,99,235,0.12)]",
-            isFailed   && "border-red-200 bg-red-50 text-red-600",
-            isBlocked  && "border-amber-300 bg-amber-50 text-amber-600 shadow-[0_0_0_4px_rgba(245,158,11,0.12)]",
-            isIdle     && "border-zinc-200 bg-white text-zinc-300"
+            isCompleted && "border-emerald-200 bg-success-soft text-emerald-600",
+            isRunning  && "border-brand bg-brand-soft text-brand shadow-[0_0_0_4px_rgba(79,70,229,0.12)]",
+            isFailed   && "border-red-200 bg-danger-soft text-red-600",
+            isBlocked  && "border-amber-300 bg-warning-soft text-amber-600 shadow-[0_0_0_4px_rgba(245,158,11,0.12)]",
+            isIdle     && "border-border bg-surface text-zinc-300"
           )}
           role="img"
           aria-label={`${AGENT_SHORT[agent]}: ${state}`}
@@ -105,7 +105,7 @@ function StageNode({ agent, state, isLast, compact, index }: StageNodeProps) {
           {isBlocked && (
             <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-40" />
-              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-amber-500" />
+              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-surface bg-amber-500" />
             </span>
           )}
         </div>
