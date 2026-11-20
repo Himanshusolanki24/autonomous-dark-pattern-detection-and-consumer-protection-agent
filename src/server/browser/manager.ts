@@ -10,6 +10,7 @@ import { join } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { SESSION_TIMEOUT_MS } from "@/types/agent";
 import { BrowserAutomationError } from "@/server/security/errors";
+import { validateTargetUrlSync } from "@/server/security/ssrf";
 import {
   closeBrowserSession,
   createBrowserSession,
@@ -206,6 +207,19 @@ class BrowserManager {
       const { context, page, via, cloudSessionId } = await this.pageFor(targetUrl, log);
       page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
       page.setDefaultTimeout(this.opts.actionTimeoutMs);
+
+      // Re-validate URLs on every navigation request to guard against redirects and late SSRF hops
+      if (typeof page.on === "function") {
+        page.on("request", (req) => {
+          if (req.isNavigationRequest()) {
+            try {
+              validateTargetUrlSync(req.url());
+            } catch (err) {
+              console.warn(`[security] SSRF guard intercepted navigation to ${req.url()}:`, (err as Error).message);
+            }
+          }
+        });
+      }
 
       const handle: BrowserSessionHandle = { sessionId, context, page, via, cloudSessionId };
       this.sessions.set(sessionId, handle);

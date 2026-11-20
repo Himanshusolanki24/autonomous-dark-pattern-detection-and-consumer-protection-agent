@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
@@ -110,14 +110,18 @@ function ToggleRow({
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-function useSave() {
+function useSave(onPersist?: () => void) {
   const [state, setState] = useState<SaveState>("idle");
 
   const save = async () => {
     setState("saving");
-    await new Promise((r) => setTimeout(r, 800));
-    // In dev mode settings are local — always succeed
-    setState("saved");
+    await new Promise((r) => setTimeout(r, 400));
+    try {
+      onPersist?.();
+      setState("saved");
+    } catch {
+      setState("error");
+    }
     setTimeout(() => setState("idle"), 2000);
   };
 
@@ -163,25 +167,42 @@ const SENSITIVITY = [
 ] as const;
 
 export default function SettingsPage() {
-  // Profile
   const [displayName, setDisplayName] = useState("Demo User");
-  const profileSave = useSave();
-
-  // Agent preferences
   const [sensitivity, setSensitivity] = useState<"low" | "medium" | "high">("high");
   const [pauseOnDetection, setPauseOnDetection] = useState(false);
-  const agentSave = useSave();
-
-  // Safety
   const [autoStopOnError, setAutoStopOnError] = useState(true);
-  const safetySave = useSave();
-
-  // Evidence
   const [proofRetention, setProofRetention] = useState(true);
-  const evidenceSave = useSave();
-
-  // Danger zone
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("trapkiller_settings");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.displayName) setDisplayName(s.displayName);
+        if (s.sensitivity) setSensitivity(s.sensitivity);
+        if (s.pauseOnDetection !== undefined) setPauseOnDetection(s.pauseOnDetection);
+        if (s.autoStopOnError !== undefined) setAutoStopOnError(s.autoStopOnError);
+        if (s.proofRetention !== undefined) setProofRetention(s.proofRetention);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const persistSettings = useCallback((updates: Record<string, unknown>) => {
+    try {
+      const current = JSON.parse(localStorage.getItem("trapkiller_settings") || "{}");
+      localStorage.setItem("trapkiller_settings", JSON.stringify({ ...current, ...updates }));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const profileSave = useSave(() => persistSettings({ displayName }));
+  const agentSave = useSave(() => persistSettings({ sensitivity, pauseOnDetection }));
+  const safetySave = useSave(() => persistSettings({ autoStopOnError }));
+  const evidenceSave = useSave(() => persistSettings({ proofRetention }));
 
   const activeSensitivity = SENSITIVITY.find((s) => s.key === sensitivity) ?? SENSITIVITY[2];
 
@@ -317,7 +338,7 @@ export default function SettingsPage() {
       >
         <ToggleRow
           title="Retain proof screenshots"
-          description="Keep verification screenshots for the duration of your session. Screenshots are deleted automatically when the session ends."
+          description="Keep verification screenshots according to the retention window (default 7 days). Older proofs are pruned automatically."
           checked={proofRetention}
           onChange={setProofRetention}
         />
@@ -326,7 +347,7 @@ export default function SettingsPage() {
           <p className="text-[11.5px] leading-5 text-zinc-500">
             Proof files are written to{" "}
             <code className="rounded bg-zinc-200/70 px-1 py-0.5 font-mono text-[10.5px] text-zinc-700">
-              backend/.proofs/
+              .proofs/
             </code>{" "}
             and are only accessible server-side. They are never exposed publicly.
           </p>
@@ -401,7 +422,14 @@ export default function SettingsPage() {
                       size="sm"
                       className="bg-red-600 text-white hover:bg-red-700"
                       onClick={() => {
-                        // In dev mode: just close the confirmation
+                        try {
+                          localStorage.removeItem("trapkiller_settings");
+                        } catch {}
+                        setDisplayName("Demo User");
+                        setSensitivity("high");
+                        setPauseOnDetection(false);
+                        setAutoStopOnError(true);
+                        setProofRetention(true);
                         setShowDangerConfirm(false);
                       }}
                     >

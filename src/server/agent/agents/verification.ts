@@ -73,7 +73,8 @@ export const verifyNode: NodeHandler = async (
 
   return {
     currentStage: "verification",
-    status: confirmed ? "completed" : "running",
+    status: confirmed ? "completed" : "failed",
+    errorMessage: confirmed ? undefined : "Outcome not confirmed — no verification proof on page",
     evidence: confirmed
       ? `Verified: ${perception.title} — ${text.slice(0, 120)}`
       : undefined,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AgentCancelledError, buildGraph, GRAPH, routeAfterAct, routeAfterPlan } from "@/server/agent/state";
+import { AgentCancelledError, buildGraph, GRAPH, routeAfterAct, routeAfterPlan, routeAfterVerify } from "@/server/agent/state";
 import type { AgentState } from "@/server/agent/state";
 import type { RuntimeContext, NodeHandler } from "@/server/agent/graph";
 
@@ -79,6 +79,16 @@ describe("routeAfterAct", () => {
   it("routes to verify/fail on terminal states", () => {
     expect(routeAfterAct({ ...baseState(), status: "completed" })).toBe(GRAPH.VERIFY);
     expect(routeAfterAct({ ...baseState(), status: "failed" })).toBe(GRAPH.FAIL);
+  });
+});
+
+describe("routeAfterVerify", () => {
+  it("routes to complete when outcome is verified as completed", () => {
+    expect(routeAfterVerify({ ...baseState(), status: "completed" })).toBe(GRAPH.COMPLETE);
+  });
+  it("routes to fail when outcome is unverified or failed", () => {
+    expect(routeAfterVerify({ ...baseState(), status: "failed" })).toBe(GRAPH.FAIL);
+    expect(routeAfterVerify({ ...baseState(), status: "running" })).toBe(GRAPH.FAIL);
   });
 });
 

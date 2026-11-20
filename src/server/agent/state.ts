@@ -84,6 +84,12 @@ export function routeAfterAct(state: AgentState): string {
   return GRAPH.PERCEIVE;
 }
 
+/** Conditional edge target after the verify node. */
+export function routeAfterVerify(state: AgentState): string {
+  if (state.status === "completed") return GRAPH.COMPLETE;
+  return GRAPH.FAIL;
+}
+
 export function buildGraph(
   nodes: Record<string, (state: AgentState, ctx: RuntimeContext) => Promise<Partial<AgentState>>>
 ) {
@@ -115,7 +121,10 @@ export function buildGraph(
     .addConditionalEdges(GRAPH.APPROVAL_GATE, (s) =>
       s.status === "approval_required" ? END : GRAPH.ACT
     )
-    .addEdge(GRAPH.VERIFY, GRAPH.COMPLETE)
+    .addConditionalEdges(GRAPH.VERIFY, routeAfterVerify, [
+      GRAPH.COMPLETE,
+      GRAPH.FAIL,
+    ])
     .addEdge(GRAPH.COMPLETE, END)
     .addEdge(GRAPH.FAIL, END);
 

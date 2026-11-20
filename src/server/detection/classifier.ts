@@ -259,8 +259,8 @@ export function heuristicClassify(perception: PerceptionResult): DarkPatternDete
       patternType: "confirmshaming",
       severity: "high",
       confidence: boost(patternDefinition("confirmshaming").baseConfidence, shameHits.length),
-      elementText: el?.text,
-      elementRole: el?.role,
+      elementText: el?.text ?? shameHits[0],
+      elementRole: el?.role ?? "text",
       explanation:
         "The decline option uses guilt-inducing language to discourage the user from continuing.",
     });
@@ -287,8 +287,8 @@ export function heuristicClassify(perception: PerceptionResult): DarkPatternDete
       patternType: "forced_continuity",
       severity: "medium",
       confidence: boost(0.6, retentionHits.length),
-      elementText: el?.text,
-      elementRole: el?.role,
+      elementText: el?.text ?? retentionHits[0],
+      elementRole: el?.role ?? "text",
       explanation: "A forced retention offer interrupts the cancellation flow.",
     });
   }
@@ -318,8 +318,8 @@ export function heuristicClassify(perception: PerceptionResult): DarkPatternDete
       patternType: "roach_motel",
       severity: "high",
       confidence: boost(patternDefinition("roach_motel").baseConfidence, 2),
-      elementText: el?.text,
-      elementRole: el?.role,
+      elementText: el?.text ?? "Cancel membership",
+      elementRole: el?.role ?? "link",
       explanation:
         "Entry is straightforward while the exit path is deliberately difficult to locate.",
     });

@@ -336,9 +336,14 @@ function AgentConsole() {
             <div className="relative flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="eyebrow text-emerald-700">Outcome</p>
-                <p className="font-display mt-1.5 text-[24px] font-bold">Cancellation confirmed</p>
+                <p className="font-display mt-1.5 text-[24px] font-bold">
+                  {store.task?.plan === "Investigation" ? "Investigation completed" : "Cancellation confirmed"}
+                </p>
                 <ul className="mt-3 space-y-1.5 text-[13.5px] text-emerald-900">
-                  {["Reached the confirmation page", "Found the cancellation message", "Saved a screenshot as proof"].map((t) => (
+                  {(store.task?.plan === "Investigation"
+                    ? ["Scanned page structure", "Classified dark patterns", "Captured snapshot evidence"]
+                    : ["Reached the confirmation page", "Found the cancellation message", "Saved a screenshot as proof"]
+                  ).map((t) => (
                     <li key={t} className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" /> {t}
                     </li>
