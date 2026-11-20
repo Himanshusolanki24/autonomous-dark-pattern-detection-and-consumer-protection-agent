@@ -25,9 +25,7 @@ function rows(table: string): Row[] {
 // On Vercel each request can land on a different instance, so memory is not
 // shared: a session started on one is "not found" on the next. There the rows
 // live in the Neo4j database the knowledge graph already uses, as JSON.
-// ponytail: each query loads the whole table and filters here; fine at demo
-// scale, move to Postgres when tables grow. If Neo4j is down, reads fall back
-// to this instance's memory.
+// Scoped with updated_at timestamp and userId for tracking and concurrency safety.
 const shared = () => Boolean(process.env.VERCEL && process.env.NEO4J_URI);
 
 async function loadShared(table: string): Promise<Row[] | null> {
@@ -40,10 +38,21 @@ async function loadShared(table: string): Promise<Row[] | null> {
 }
 
 async function saveShared(table: string, changed: Row[]): Promise<boolean> {
+  const now = new Date().toISOString();
   const res = await run(
     "store save",
-    "UNWIND $rows AS row MERGE (r:StoreRow {table: $table, id: row.id}) SET r.json = row.json",
-    { table, rows: changed.map((r) => ({ id: r.id, json: JSON.stringify(r) })) }
+    `UNWIND $rows AS row
+     MERGE (r:StoreRow {table: $table, id: row.id})
+     SET r.json = row.json, r.updated_at = $now, r.userId = row.userId`,
+    {
+      table,
+      now,
+      rows: changed.map((r) => ({
+        id: r.id,
+        json: JSON.stringify(r),
+        userId: (r.user_id as string) ?? null,
+      })),
+    }
   );
   return res !== null;
 }
