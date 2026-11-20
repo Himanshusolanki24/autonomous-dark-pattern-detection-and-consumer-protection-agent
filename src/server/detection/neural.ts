@@ -76,6 +76,16 @@ function softmax(z: number[]): number[] {
   return e.map((v) => v / sum);
 }
 
+const CANCELLATION_AFFORDANCES = [
+  "cancel",
+  "cancel subscription",
+  "no thanks, cancel",
+  "yes, cancel",
+  "confirm cancellation",
+  "manage subscription",
+  "unsubscribe",
+];
+
 const isPattern = (label: string): label is PatternType => TAXONOMY.some((t) => t.type === label);
 
 /**
@@ -105,6 +115,12 @@ export async function neuralClassify(
     const probs = softmax(head.weights.map((w, c) => w.reduce((s, x, i) => s + x * v[i], head.bias[c])));
     const p = Math.max(...probs);
     const label = head.labels[probs.indexOf(p)];
+    const isCancelAffordance = CANCELLATION_AFFORDANCES.some((c) =>
+      sentences[si].toLowerCase().includes(c)
+    );
+    if (label === "misdirection" && isCancelAffordance) {
+      return;
+    }
     if (isPattern(label) && p >= NEURAL_THRESHOLD && p > (best.get(label)?.p ?? 0)) {
       best.set(label, { sentence: sentences[si], p });
     }
