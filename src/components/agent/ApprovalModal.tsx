@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Ban, Check, Info, ShieldAlert, TriangleAlert, UserCheck, X } from "lucide-react";
 import { useAgentStore } from "@/stores/agent-store";
 import { demoSimulator } from "@/lib/services/simulator";
-import { approveSession, rejectSession, stopSession } from "@/lib/services/agentService";
+import { approveSession, rejectSession } from "@/lib/services/agentService";
 import { Button } from "@/components/ui/button";
 
 export function ApprovalModal() {

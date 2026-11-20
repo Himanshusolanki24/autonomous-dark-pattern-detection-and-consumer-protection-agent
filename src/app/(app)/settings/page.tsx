@@ -175,19 +175,22 @@ export default function SettingsPage() {
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("trapkiller_settings");
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.displayName) setDisplayName(s.displayName);
-        if (s.sensitivity) setSensitivity(s.sensitivity);
-        if (s.pauseOnDetection !== undefined) setPauseOnDetection(s.pauseOnDetection);
-        if (s.autoStopOnError !== undefined) setAutoStopOnError(s.autoStopOnError);
-        if (s.proofRetention !== undefined) setProofRetention(s.proofRetention);
+    const timer = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem("trapkiller_settings");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s.displayName) setDisplayName(s.displayName);
+          if (s.sensitivity) setSensitivity(s.sensitivity);
+          if (s.pauseOnDetection !== undefined) setPauseOnDetection(s.pauseOnDetection);
+          if (s.autoStopOnError !== undefined) setAutoStopOnError(s.autoStopOnError);
+          if (s.proofRetention !== undefined) setProofRetention(s.proofRetention);
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const persistSettings = useCallback((updates: Record<string, unknown>) => {
