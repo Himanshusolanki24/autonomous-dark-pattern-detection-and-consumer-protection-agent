@@ -10,17 +10,17 @@ import { requireUser } from "@/server/auth/guards";
 import { checkRateLimit } from "@/server/security/rate-limit";
 import { validateTargetUrl } from "@/server/security/ssrf";
 import { browserManager } from "@/server/browser/manager";
-import { BrowserAutomationError } from "@/server/security/errors";
+import { BrowserAutomationError, ValidationError } from "@/server/security/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = api(async (req: Request) => {
   const user = await requireUser();
-  checkRateLimit(user.id, "scanner");
+  checkRateLimit(user.id, "screenshot");
 
   const raw = new URL(req.url).searchParams.get("url");
-  if (!raw) throw new Error("Missing url");
+  if (!raw) throw new ValidationError("Missing url parameter");
   const url = await validateTargetUrl(raw);
 
   let shot: Buffer;

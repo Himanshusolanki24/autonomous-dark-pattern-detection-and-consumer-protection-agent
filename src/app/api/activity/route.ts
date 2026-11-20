@@ -41,8 +41,7 @@ export const GET = api(async (req: Request) => {
       eventType: e.event_type,
       message: e.message,
       status: e.status,
-      website: (e as unknown as { agent_sessions?: { target_url?: string } }).agent_sessions
-        ?.target_url ?? null,
+      website: e.website ?? null,
     })),
     nextCursor,
   });

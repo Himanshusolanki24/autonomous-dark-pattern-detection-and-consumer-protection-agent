@@ -73,8 +73,9 @@ function site(url: string): { host: string; path: string } | null {
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
-/** Learning rate: how far one reward moves a value toward it (value += ALPHA * (reward - value)). */
-const ALPHA = 0.5;
+/** Learning rate: how far one reward moves a value toward it (value += ALPHA * (reward - value)).
+ * Kept low (0.15) so multiple votes are required before an indicator or action passes the LEARNED_THRESHOLD. */
+const ALPHA = 0.15;
 
 /** How far a learned value must be from 0 before the agent acts on it. */
 export const LEARNED_THRESHOLD = 0.4;

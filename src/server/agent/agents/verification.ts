@@ -10,7 +10,14 @@ import { perceive } from "@/server/browser/perception";
 import { emitEvent } from "../events";
 import { recordOutcome } from "@/server/graph/neo4j";
 
-const SUCCESS_MARKERS = ["subscription is cancelled", "cancelled", "cancellation confirmed"];
+const SUCCESS_MARKERS = [
+  "subscription is cancelled",
+  "subscription has been cancelled",
+  "cancellation confirmed",
+  "cancellation complete",
+  "membership cancelled",
+  "successfully cancelled",
+];
 
 export const verifyNode: NodeHandler = async (
   state: AgentState,

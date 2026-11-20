@@ -175,12 +175,14 @@ export function startPolling(
 ): { cancel: () => void } {
   let cancelled = false;
   let timer: ReturnType<typeof setInterval> | null = null;
+  let consecutiveErrors = 0;
   const store = useAgentStore.getState;
 
   const tick = async () => {
     if (cancelled) return;
     try {
       const [session, events] = await Promise.all([fetchSession(sessionId), fetchEvents(sessionId)]);
+      consecutiveErrors = 0;
 
       const s = store();
       s.setStatus(mapSessionStatus(session.status));
@@ -217,16 +219,17 @@ export function startPolling(
       }
 
       // Update browser preview state
-      if (session.targetUrl) {
+      const liveUrl = (session.state?.lastUrl as string) || session.targetUrl;
+      if (liveUrl) {
         const screen: BrowserScreen = 
-          session.status === "completed" || session.targetUrl.includes("success")
+          session.status === "completed" || liveUrl.includes("success")
           ? "success"
-          : session.targetUrl.includes("confirm")
+          : liveUrl.includes("confirm")
           ? "confirm"
           : "account";
         s.setBrowser({
-          url: session.targetUrl,
-          title: session.targetUrl ? new URL(session.targetUrl).hostname : "Live Browser",
+          url: liveUrl,
+          title: liveUrl ? new URL(liveUrl).hostname : "Live Browser",
           screen,
           isScanning: session.status === "running",
         });
@@ -260,7 +263,10 @@ export function startPolling(
         finish();
       }
     } catch {
-      finish();
+      consecutiveErrors++;
+      if (consecutiveErrors >= 5) {
+        finish();
+      }
     }
   };
 

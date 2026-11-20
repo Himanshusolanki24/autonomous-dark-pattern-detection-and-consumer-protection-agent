@@ -146,10 +146,18 @@ class Builder {
     const all = remote ?? rows(this.table);
 
     if (this.insertValue) {
-      const inserted = (Array.isArray(this.insertValue)
-        ? this.insertValue
-        : [this.insertValue]
-      ).map((r) => {
+      const items = Array.isArray(this.insertValue) ? this.insertValue : [this.insertValue];
+      // Check unique constraint violations (e.g. idempotency_keys.key or id)
+      for (const item of items) {
+        if (item.key && all.some((x) => x.key === item.key)) {
+          return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+        }
+        if (item.id && all.some((x) => x.id === item.id)) {
+          return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+        }
+      }
+
+      const inserted = items.map((r) => {
         const row = { ...r };
         if (!row.id) row.id = `${this.table}_${randomUUID().slice(0, 18)}`;
         if (!row.created_at) row.created_at = new Date().toISOString();

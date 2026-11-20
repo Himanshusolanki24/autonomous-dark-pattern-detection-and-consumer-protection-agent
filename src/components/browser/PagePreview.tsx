@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { BrowserState, PatternType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BACKEND_URL } from "@/lib/api";
+import { useAgentStore } from "@/stores/agent-store";
 import { DarkPatternHighlight } from "./DarkPatternHighlight";
 
 /**
@@ -261,11 +262,13 @@ export function PagePreview({
   onElementClick?: (pattern: PatternType) => void;
 }) {
   const screen = browser.screen;
+  const live = useAgentStore((s) => s.live);
 
-  // Any real http(s) URL renders live via a backend Playwright screenshot —
-  // works even for sites that block iframe embedding (X-Frame-Options).
+  // Any real http(s) URL in a live session renders via a backend Playwright screenshot.
+  // In demo mode or when displaying simulated screens, display the mock flow.
   const url = browser.url?.trim();
-  if (url && /^https?:\/\//i.test(url) && url !== "about:blank") {
+  const isDemoScreen = screen && ["plans", "account", "cancel", "retention", "confirm", "success"].includes(screen);
+  if (live && url && /^https?:\/\//i.test(url) && url !== "about:blank" && !isDemoScreen) {
     return <LiveShot url={url} isScanning={browser.isScanning} />;
   }
 

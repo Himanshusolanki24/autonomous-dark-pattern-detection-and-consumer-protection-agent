@@ -92,5 +92,5 @@ export interface AgentGraphState {
 }
 
 export const MAX_ACTIONS = 25;
-export const APPROVAL_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+export const APPROVAL_TTL_MS = 10 * 60 * 1000; // 10 minutes (bounded by SESSION_TIMEOUT_MS)

@@ -74,6 +74,11 @@ export const actNode: NodeHandler = async (
       message: `Step ${nextCount} failed; retrying`,
       status: "running",
     });
+    return {
+      currentStage: "action",
+      actionCount: nextCount,
+      lastClick: undefined,
+    };
   }
 
   await emitEvent(supabase, state.sessionId, {

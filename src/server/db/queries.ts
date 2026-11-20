@@ -49,7 +49,7 @@ export async function listSessionDetections(db: DbClient, sessionId: string, lim
   return data ?? [];
 }
 
-export async function listSessionEvents(db: DbClient, sessionId: string, limit = 200) {
+export async function listSessionEvents(db: DbClient, sessionId: string, limit = 1000) {
   const { data, error } = await db
     .from("agent_events")
     .select("*")

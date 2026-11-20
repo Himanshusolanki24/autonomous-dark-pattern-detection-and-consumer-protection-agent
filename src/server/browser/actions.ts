@@ -9,7 +9,19 @@ import type { Page } from "playwright";
 import type { AgentAction } from "@/types/agent";
 import { BrowserAutomationError } from "@/server/security/errors";
 
-function visibleLocator(page: Page, target: string) {
+async function visibleLocator(page: Page, target: string) {
+  // 1. Prefer exact role-based button or link matching
+  const button = page.getByRole("button", { name: target, exact: true }).filter({ visible: true }).first();
+  if ((await button.count().catch(() => 0)) > 0) return button;
+
+  const link = page.getByRole("link", { name: target, exact: true }).filter({ visible: true }).first();
+  if ((await link.count().catch(() => 0)) > 0) return link;
+
+  // 2. Prefer exact text match
+  const exact = page.getByText(target, { exact: true }).filter({ visible: true }).first();
+  if ((await exact.count().catch(() => 0)) > 0) return exact;
+
+  // 3. Fall back to substring match
   return page
     .getByText(target, { exact: false })
     .filter({ visible: true })
@@ -17,13 +29,13 @@ function visibleLocator(page: Page, target: string) {
 }
 
 async function safeClick(page: Page, target: string): Promise<void> {
-  const el = visibleLocator(page, target);
+  const el = await visibleLocator(page, target);
   await el.scrollIntoViewIfNeeded({ timeout: 5000 });
   await el.click({ timeout: 8000 });
 }
 
 async function safeFill(page: Page, target: string, value: string): Promise<void> {
-  const el = visibleLocator(page, target);
+  const el = await visibleLocator(page, target);
   await el.scrollIntoViewIfNeeded({ timeout: 5000 });
   await el.fill(value, { timeout: 8000 });
 }

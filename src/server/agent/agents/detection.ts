@@ -36,7 +36,7 @@ export const detectNode: NodeHandler = async (
       (result.graph.related.length > 0 ? `, related: ${result.graph.related.join(", ")}` : "")
     : "";
 
-  if (result.detections.length > 0) {
+  if (result.detections.length > 0 && !state.resumeApproval) {
     // Persist each confirmed detection (nullable session id for scanner-only runs).
     await supabase.from("dark_pattern_detections").insert(
       result.detections.map((d) => ({

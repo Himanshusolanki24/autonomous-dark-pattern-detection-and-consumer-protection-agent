@@ -97,6 +97,7 @@ class BrowserManager {
   private readonly useCloud: boolean;
   private cloud: CloudBrowser | null = null;
   private cloudStarting: Promise<CloudBrowser> | null = null;
+  private creating = new Map<string, Promise<BrowserSessionHandle>>();
   private shots = new Map<string, { at: number; shot: Promise<Buffer> }>();
   private waiting = new Map<string, (shot: Buffer) => void>();
 
@@ -198,20 +199,30 @@ class BrowserManager {
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
 
-    const { context, page, via, cloudSessionId } = await this.pageFor(targetUrl, log);
-    page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
-    page.setDefaultTimeout(this.opts.actionTimeoutMs);
+    const inFlight = this.creating.get(sessionId);
+    if (inFlight) return inFlight;
 
-    const handle: BrowserSessionHandle = { sessionId, context, page, via, cloudSessionId };
-    this.sessions.set(sessionId, handle);
+    const promise = (async () => {
+      const { context, page, via, cloudSessionId } = await this.pageFor(targetUrl, log);
+      page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
+      page.setDefaultTimeout(this.opts.actionTimeoutMs);
 
-    const timer = setTimeout(() => {
-      void this.destroySession(sessionId, "session_timeout");
-    }, this.opts.sessionTimeoutMs);
-    timer.unref?.();
-    this.timeouts.set(sessionId, timer);
+      const handle: BrowserSessionHandle = { sessionId, context, page, via, cloudSessionId };
+      this.sessions.set(sessionId, handle);
 
-    return handle;
+      const timer = setTimeout(() => {
+        void this.destroySession(sessionId, "session_timeout");
+      }, this.opts.sessionTimeoutMs);
+      timer.unref?.();
+      this.timeouts.set(sessionId, timer);
+
+      return handle;
+    })().finally(() => {
+      this.creating.delete(sessionId);
+    });
+
+    this.creating.set(sessionId, promise);
+    return promise;
   }
 
   getSession(sessionId: string): BrowserSessionHandle | null {

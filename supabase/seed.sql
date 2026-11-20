@@ -4,6 +4,26 @@
 -- Never insert fake production users.
 -- =============================================================================
 
+-- Ensure the auth user exists so foreign key references in profiles/sessions succeed
+insert into auth.users (
+  id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+)
+values (
+  '00000000-0000-0000-0000-00000000d001',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated',
+  'authenticated',
+  'demo@trapkiller.local',
+  '',
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{"full_name":"Demo User"}',
+  now(),
+  now()
+)
+on conflict (id) do nothing;
+
 insert into public.profiles (id, full_name, avatar_url, email)
 values
   ('00000000-0000-0000-0000-00000000d001', 'Demo User', null, 'demo@trapkiller.local')

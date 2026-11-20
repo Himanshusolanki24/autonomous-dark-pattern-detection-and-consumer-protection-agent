@@ -25,7 +25,6 @@ create policy "agent_proofs_insert_own"
   with check (
     bucket_id = 'agent-proofs'
     and (storage.foldername(name))[1] = auth.uid()::text
-    and octet_length(coalesce(bulk_extension_name, '')) = 0
   );
 
 drop policy if exists "agent_proofs_delete_own" on storage.objects;

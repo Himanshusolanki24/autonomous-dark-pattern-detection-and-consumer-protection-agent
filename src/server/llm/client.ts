@@ -19,7 +19,7 @@ interface ChatOptions {
 
 // ponytail: one fixed budget per call. A slow model falls back to the
 // deterministic path instead of stalling the run (or a serverless function).
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 20_000);
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 8_000);
 
 function config() {
   const apiKey = process.env.LLM_API_KEY;

@@ -90,10 +90,19 @@ export async function perceive(page: Page): Promise<PerceptionResult> {
 /** Cheap page-state classifier driving the demo-target flow. */
 function inferPageState(raw: RawSnapshot): PerceptionResult["pageState"] {
   const t = `${raw.title} ${raw.text}`.toLowerCase();
-  if (t.includes("success") || t.includes("cancelled") || t.includes("your subscription is cancelled")) {
+  const url = raw.url.toLowerCase();
+  if (
+    url.includes("/success") ||
+    t.includes("subscription is cancelled") ||
+    t.includes("subscription has been cancelled") ||
+    t.includes("cancellation confirmed") ||
+    t.includes("cancellation complete") ||
+    t.includes("membership cancelled") ||
+    t.includes("successfully cancelled")
+  ) {
     return "success";
   }
-  if (t.includes("confirm") || t.includes("are you sure") || t.includes("final step")) {
+  if (t.includes("confirm cancellation") || t.includes("are you sure") || t.includes("final step")) {
     return "confirmation";
   }
   if (t.includes("select a plan") || t.includes("what would you like")) {

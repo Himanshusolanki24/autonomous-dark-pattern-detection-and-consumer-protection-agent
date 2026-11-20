@@ -66,7 +66,7 @@ video/                    Remotion pitch video (separate package)
 | ------- | ------------ |
 | `npm run dev` | Start the app on port 3000 |
 | `npm run build` / `npm start` | Production build and server |
-| `npm test` | Vitest suites (52 tests; see note below) |
+| `npm test` | Vitest suites (13 suites, 82 tests) |
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
 | `npm run smoke` | Scripted run against the test site (needs the dev server running) |
 | `npm run db:start` / `db:reset` / `db:types` | Local Supabase helpers |

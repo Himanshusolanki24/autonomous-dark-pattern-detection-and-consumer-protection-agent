@@ -105,6 +105,8 @@ async function persistFinalState(sessionId: string, state: AgentState): Promise<
     .from("agent_sessions")
     .update({
       status: state.status,
+      current_stage: (state.currentStage as "perception" | "detection" | "planning" | "action" | "verification") ?? null,
+      error_message: state.errorMessage ?? null,
       state: state as unknown as Json,
       completed_at:
         state.status === "completed" || state.status === "failed" || state.status === "cancelled"
@@ -115,11 +117,19 @@ async function persistFinalState(sessionId: string, state: AgentState): Promise<
   await persistTaskOutcome(state);
 }
 
+const inFlightSessions = new Set<string>();
+
 /**
  * Runs the graph to completion (or to an approval pause). Safe to call
  * fire-and-forget; a per-session lock prevents concurrent double-runs.
  */
 export async function runToCompletion(input: StartRunInput | ResumeRunInput): Promise<void> {
+  if (inFlightSessions.has(input.sessionId)) {
+    console.warn(`[runner] session ${input.sessionId} is already running — skipping duplicate invocation`);
+    return;
+  }
+  inFlightSessions.add(input.sessionId);
+
   const supabase = createAdminClient();
   const graph = createGraph();
 
@@ -217,6 +227,7 @@ export async function runToCompletion(input: StartRunInput | ResumeRunInput): Pr
       finalState = { ...state, status: "failed", errorMessage: message };
     }
   } finally {
+    inFlightSessions.delete(input.sessionId);
     if (finalState?.status !== "approval_required") {
       await browserManager.destroySession(input.sessionId, "completed");
     }
