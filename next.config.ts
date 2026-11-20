@@ -25,6 +25,18 @@ const nextConfig: NextConfig = {
     root: __root,
   },
   outputFileTracingRoot: __root,
+  // Optimize production builds
+  poweredByHeader: false,
+  // Aggressive code splitting for faster initial load
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-slot",
+    ],
+  },
 };
 
 export default nextConfig;

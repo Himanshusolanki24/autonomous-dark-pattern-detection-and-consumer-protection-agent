@@ -1,76 +1,97 @@
 @import "tailwindcss";
 
-@theme inline {
-  /* ── Color tokens: "marked evidence" ─────────────
-     paper + ink, an ink-blue brand, and a highlighter
-     marker reserved for things the agent caught. */
-  --color-background: #f4f5f2;
-  --color-surface: #ffffff;
-  --color-foreground: #151a2d;
-  --color-muted: #eef0ec;
-  --color-muted-foreground: #6f7581;
-  --color-border: #e1e4df;
-  --color-border-strong: #c9cdc7;
+/* ─────────────────────────────────────────────────────────────
+   TrapKiller — "Evidence Lab"
+   A cool, clinical canvas, white instrument panels, one indigo
+   signal colour, and an amber marker reserved for evidence.
+   ───────────────────────────────────────────────────────────── */
 
-  --color-brand: #2f3f95;
-  --color-brand-soft: #f1f3fb;
-  --color-brand-muted: #e2e6f6;
-  --color-marker: #ffe15a;
+@theme inline {
+  /* Paper and ink */
+  --color-background: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fbfbfd;
+  --color-foreground: #0b1220;
+  --color-muted: #eef0f5;
+  --color-muted-foreground: #667085;
+  --color-border: #e5e8ef;
+  --color-border-strong: #cfd5e0;
+
+  /* Signal (brand) */
+  --color-brand: #4f46e5;
+  --color-brand-soft: #eef0ff;
+  --color-brand-muted: #e0e4ff;
+
+  /* Evidence marker */
+  --color-marker: #ffd54a;
+  --color-marker-soft: #fff7d6;
+
+  /* Instrument accent */
+  --color-signal: #0ea5e9;
+  --color-signal-soft: #e8f7fe;
 
   /* Semantic */
-  --color-danger: #cf3f3f;
-  --color-danger-soft: #fdf1f1;
-  --color-warning: #d9831f;
-  --color-warning-soft: #fdf6ea;
-  --color-success: #1f8a5b;
-  --color-success-soft: #eef8f2;
+  --color-danger: #dc3d43;
+  --color-danger-soft: #fdf0f1;
+  --color-warning: #d97706;
+  --color-warning-soft: #fdf5e7;
+  --color-success: #0f9d76;
+  --color-success-soft: #e9f9f2;
 
-  /* ponytail: the app uses ~1.7k raw zinc/blue classes across 71 files;
-     re-tuning the scales here re-skins all of them without touching each file. */
-  --color-zinc-50: #f6f7f5;
-  --color-zinc-100: #eef0ec;
-  --color-zinc-200: #e1e4df;
-  --color-zinc-300: #c9cdc7;
-  --color-zinc-400: #9aa0a6;
-  --color-zinc-500: #6f7581;
-  --color-zinc-600: #535967;
-  --color-zinc-700: #3b4150;
-  --color-zinc-800: #262b38;
-  --color-zinc-900: #151a2d;
-  --color-zinc-950: #0e1220;
-  --color-blue-50: #f1f3fb;
-  --color-blue-100: #e2e6f6;
-  --color-blue-200: #c6cdec;
-  --color-blue-300: #9ea9dc;
-  --color-blue-400: #7180c6;
-  --color-blue-500: #4d5fb0;
-  --color-blue-600: #2f3f95;
-  --color-blue-700: #26347d;
-  --color-blue-800: #1f2a63;
-  --color-blue-900: #19214d;
+  /* Cool neutral scale — remapped so every existing zinc class
+     picks up the new slate palette without touching each file. */
+  --color-zinc-50: #f8f9fb;
+  --color-zinc-100: #eef0f5;
+  --color-zinc-200: #e3e6ee;
+  --color-zinc-300: #cfd5e0;
+  --color-zinc-400: #98a2b3;
+  --color-zinc-500: #667085;
+  --color-zinc-600: #4b5565;
+  --color-zinc-700: #344054;
+  --color-zinc-800: #1d2939;
+  --color-zinc-900: #101828;
+  --color-zinc-950: #080d18;
 
-  /* ── Typography ──────────────────────────────── */
+  /* Indigo scale — replaces the old ink blue everywhere. */
+  --color-blue-50: #eef0ff;
+  --color-blue-100: #e0e4ff;
+  --color-blue-200: #c7cdfe;
+  --color-blue-300: #a5affc;
+  --color-blue-400: #818cf8;
+  --color-blue-500: #6366f1;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+
+  /* Typography */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-bricolage);
+  --font-display: var(--font-space);
 
-  /* ── Spacing scale additions ─────────────────── */
+  /* Soft instrument shadows */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -18px rgba(16, 24, 40, 0.18);
+  --shadow-lift: 0 2px 4px rgba(16, 24, 40, 0.04), 0 24px 48px -20px rgba(16, 24, 40, 0.22);
+  --shadow-glow: 0 0 0 1px rgba(79, 70, 229, 0.08), 0 18px 50px -18px rgba(79, 70, 229, 0.35);
+
+  /* Spacing additions */
   --spacing-18: 4.5rem;
   --spacing-22: 5.5rem;
 }
 
-/* ── Base ────────────────────────────────────────── */
+/* ── Base ───────────────────────────────────────────────── */
 
 :root {
-  --background: #f4f5f2;
-  --foreground: #151a2d;
+  --background: #f5f6f8;
+  --foreground: #0b1220;
 }
 
 h1,
 h2,
+h3,
 .font-display {
-  font-family: var(--font-bricolage), var(--font-geist-sans), sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-space), var(--font-geist-sans), sans-serif;
+  letter-spacing: -0.03em;
 }
 
 * {
@@ -85,44 +106,66 @@ html {
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(1100px 540px at 8% -8%, rgba(79, 70, 229, 0.07), transparent 62%),
+    radial-gradient(900px 460px at 96% -4%, rgba(14, 165, 233, 0.06), transparent 58%),
+    radial-gradient(700px 420px at 50% 110%, rgba(255, 213, 74, 0.05), transparent 60%);
+  background-attachment: fixed;
   color: var(--foreground);
 }
 
-/* ── Scrollbar ───────────────────────────────────── */
+/* Fine lab grid, used sparingly on hero surfaces. */
+.lab-grid {
+  background-image: radial-gradient(rgba(11, 18, 32, 0.09) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.lab-grid-faint {
+  background-image: radial-gradient(rgba(11, 18, 32, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.lab-grid-dark {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #d4d4d8 transparent;
+  scrollbar-color: #cfd5e0 transparent;
 }
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 6px;
+  background: #cfd5e0;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #b9c1cf;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* ── Focus ───────────────────────────────────────── */
+/* ── Focus & selection ──────────────────────────────────── */
 
 :focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
-
-/* ── Selection ───────────────────────────────────── */
 
 ::selection {
   background: var(--color-brand);
   color: #ffffff;
 }
 
-/* ── Skip link ───────────────────────────────────── */
+/* ── Skip link ──────────────────────────────────────────── */
 
 .skip-link {
   position: absolute;
@@ -139,15 +182,15 @@ body {
   height: auto;
   overflow: visible;
   z-index: 9999;
-  background: var(--color-brand);
+  background: var(--color-foreground);
   color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
 }
 
-/* ── Keyframes ───────────────────────────────────── */
+/* ── Keyframes ──────────────────────────────────────────── */
 
 @keyframes overlay-in {
   from { opacity: 0; }
@@ -170,16 +213,16 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes stage-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
-  50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.32); }
+  50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
 }
 @keyframes dot-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
 @keyframes warn-outline {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0.12); }
 }
 @keyframes reveal-up {
   from { opacity: 0; transform: translateY(20px); }
@@ -193,8 +236,38 @@ body {
   from { top: -20%; }
   to { top: 120%; }
 }
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(14px, -18px, 0) scale(1.04); }
+}
+@keyframes shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0.25; }
+  100% { opacity: 1; }
+}
 
-/* ── Utility classes ─────────────────────────────── */
+/* ── Utilities ──────────────────────────────────────────── */
 
 @layer utilities {
   .animate-overlay-in { animation: overlay-in 0.18s ease-out; }
@@ -208,15 +281,95 @@ body {
   .animate-reveal-up { animation: reveal-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
   .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
   .animate-scan-down { animation: scan-down 1.4s ease-in-out; }
+  .animate-float { animation: float-y 5s ease-in-out infinite; }
+  .animate-drift { animation: drift 14s ease-in-out infinite; }
+  .animate-marquee { animation: marquee 32s linear infinite; }
+  .animate-pulse-ring { animation: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .animate-blink { animation: blink 1.1s steps(1, end) infinite; }
 
-  /* Text balance for headlines */
   .text-balance { text-wrap: balance; }
-
-  /* Prevent layout shift on images */
   .img-stable { content-visibility: auto; }
+
+  /* Instrument panel: the default card surface of the lab. */
+  .panel {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-card);
+  }
+  .panel-raised {
+    border: 1px solid var(--color-border);
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-card);
+  }
+  .panel-hover {
+    transition:
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.35s ease;
+  }
+  .panel-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: var(--color-border-strong);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+  .glass-dark {
+    background: rgba(11, 18, 32, 0.62);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+
+  .text-gradient {
+    background: linear-gradient(100deg, #4f46e5 0%, #0ea5e9 55%, #4f46e5 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .eyebrow {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+
+  .hairline {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+  }
+
+  /* Gradient border without extra markup. */
+  .ring-gradient {
+    position: relative;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+      linear-gradient(120deg, rgba(79, 70, 229, 0.45), rgba(14, 165, 233, 0.25), rgba(255, 213, 74, 0.45)) border-box;
+    border: 1px solid transparent;
+  }
+
+  .shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.65) 50%,
+      transparent 80%
+    );
+    background-size: 220% 100%;
+    animation: shimmer 2.2s linear infinite;
+  }
 }
 
-/* ── Reduced motion ──────────────────────────────── */
+/* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   *,
