@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { AlertTriangle, X, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, Eye, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { api } from "@/lib/api";
 import type { DarkPattern } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -18,19 +18,30 @@ interface EvidenceDrawerProps {
   onViewEvidence?: (pattern: DarkPattern) => void;
 }
 
-export function EvidenceDrawer({
-  isOpen,
-  onClose,
-  pattern,
-  onViewEvidence,
-}: EvidenceDrawerProps) {
+const SEVERITY_TONE: Record<string, string> = {
+  critical: "border-red-200 bg-danger-soft text-red-700",
+  high: "border-amber-200 bg-warning-soft text-amber-700",
+  medium: "border-blue-100 bg-brand-soft text-blue-700",
+  low: "border-border bg-zinc-100 text-zinc-600",
+};
+
+export function EvidenceDrawer({ isOpen, onClose, pattern, onViewEvidence }: EvidenceDrawerProps) {
   // Keyed by finding so the answer resets when a different one is opened.
   const [rated, setRated] = useState<{ id: string; text: string } | null>(null);
-  if (!isOpen || !pattern) return null;
 
-  const rating = rated?.id === pattern.id ? rated.text : null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  const rating = pattern && rated?.id === pattern.id ? rated.text : null;
+
   const rate = (correct: boolean) => {
-    if (!pattern.feedback) return;
+    if (!pattern?.feedback) return;
     setRated({ id: pattern.id, text: "Saving…" });
     api
       .post<{ learned: boolean }>("/api/graph/feedback", { ...pattern.feedback, correct })
@@ -48,145 +59,134 @@ export function EvidenceDrawer({
   };
 
   return (
-    <motion.div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      initial={{ opacity: 0, transform: "scale(0.95)" }}
-      animate={{ opacity: 1, transform: "scale(1)" }}
-      exit={{ opacity: 0, transform: "scale(0.95)" }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-    >
-      <motion.div
-        className="relative bg-white rounded-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl transform"
-      >
-        <div className="relative p-6">
-          <button
+    <AnimatePresence>
+      {isOpen && pattern && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-md p-1 text-zinc-400 hover:text-zinc-700"
-            aria-label="Close evidence drawer"
+            className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm"
+            aria-hidden="true"
+          />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="evidence-title"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border bg-surface shadow-lift"
           >
-            <X className="h-5 w-5" />
-          </button>
-
-          <div className="flex items-center gap-3 mb-4">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <div>
-              <p className="font-semibold text-zinc-800">
-                {PATTERN_LABELS[pattern.type]}
-              </p>
-              <p className="text-sm text-zinc-500">Potential dark pattern detected</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                Confidence
-              </p>
-              <ConfidenceBar confidence={pattern.confidence} className="w-48" />
-              <p className="mt-1 text-sm text-zinc-500">
-                {CONFIDENCE_TIER_LABEL[confidenceTier(pattern.confidence)]} confidence
-              </p>
+            <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning-soft text-amber-600">
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="eyebrow text-[9.5px]">Evidence</p>
+                  <h2 id="evidence-title" className="font-display mt-0.5 text-[17px] font-semibold leading-snug">
+                    {PATTERN_LABELS[pattern.type] ?? pattern.type}
+                  </h2>
+                  <p className="mt-0.5 text-[11.5px] text-zinc-500">Potential dark pattern detected</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-none"
+                aria-label="Close evidence drawer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                Risk
-              </p>
-              <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium",
-                pattern.severity === "critical"
-                  ? "bg-red-100 text-red-700"
-                  : pattern.severity === "high"
-                    ? "bg-amber-100 text-amber-700"
-                    : pattern.severity === "medium"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-zinc-100 text-zinc-600"
-              )}>
-                {pattern.severity}
-              </span>
-            </div>
-          </div>
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="eyebrow text-[9.5px]">Confidence</p>
+                  <ConfidenceBar confidence={pattern.confidence} className="mt-1.5" />
+                  <p className="mt-1 text-[11.5px] text-zinc-500">
+                    {CONFIDENCE_TIER_LABEL[confidenceTier(pattern.confidence)]} confidence
+                  </p>
+                </div>
+                <div>
+                  <p className="eyebrow text-[9.5px]">Risk</p>
+                  <span
+                    className={cn(
+                      "mt-1.5 inline-flex rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold capitalize",
+                      SEVERITY_TONE[pattern.severity] ?? SEVERITY_TONE.low
+                    )}
+                  >
+                    {pattern.severity}
+                  </span>
+                </div>
+              </div>
 
-          <div className="mt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Why flagged
-            </p>
-            <blockquote className="mt-1 pl-3 border-l-2 border-amber-300 text-sm italic text-zinc-700">
-              {pattern.explanation}
-            </blockquote>
-          </div>
+              <div>
+                <p className="eyebrow text-[9.5px]">Why flagged</p>
+                <blockquote className="mt-1.5 rounded-r-lg border-l-2 border-marker bg-marker/10 py-2 pl-3 pr-2 text-[13px] leading-relaxed text-zinc-700">
+                  {pattern.explanation}
+                </blockquote>
+              </div>
 
-          <div className="mt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Visible text
-            </p>
-            <p className="mt-1 text-zinc-700 break-all">{pattern.element}</p>
-          </div>
+              <div>
+                <p className="eyebrow text-[9.5px]">Visible text</p>
+                <p className="mt-1 break-all font-mono text-[12px] leading-5 text-zinc-700">{pattern.element}</p>
+              </div>
 
-          {pattern.element && (
-            <div className="mt-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                Affected element
-              </p>
-              <p className="mt-1 text-zinc-600">{pattern.element}</p>
-            </div>
-          )}
+              {pattern.element && (
+                <div>
+                  <p className="eyebrow text-[9.5px]">Affected element</p>
+                  <p className="mt-1 text-[12.5px] leading-5 text-zinc-600">{pattern.element}</p>
+                </div>
+              )}
 
-          <div className="mt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Source
-            </p>
-            <p className="mt-1 text-zinc-500">DOM / visible text</p>
-          </div>
+              <div>
+                <p className="eyebrow text-[9.5px]">Source</p>
+                <p className="mt-1 text-[12.5px] text-zinc-500">DOM / visible text</p>
+              </div>
 
-          {pattern.feedback && (
-            <div className="mt-5 rounded-xl border border-border bg-zinc-50 p-3">
-              <p className="text-sm font-medium text-zinc-800">Is this really a dark pattern?</p>
-              <p className="mt-0.5 text-xs text-zinc-500">Your answer teaches the agent.</p>
-              {rating ? (
-                <p className="mt-2 text-sm text-zinc-700" role="status">
-                  {rating}
-                </p>
-              ) : (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => rate(true)}>
-                    <ThumbsUp className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    Yes, correct
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => rate(false)}>
-                    <ThumbsDown className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    No, false alarm
-                  </Button>
+              {pattern.feedback && (
+                <div className="rounded-xl border border-border bg-zinc-50/70 p-3.5">
+                  <p className="text-[13px] font-semibold text-foreground">Is this really a dark pattern?</p>
+                  <p className="mt-0.5 text-[11.5px] text-zinc-500">Your answer teaches the agent.</p>
+                  {rating ? (
+                    <p className="mt-2 text-[12.5px] leading-5 text-zinc-700" role="status">
+                      {rating}
+                    </p>
+                  ) : (
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => rate(true)}>
+                        <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+                        Yes, correct
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => rate(false)}>
+                        <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+                        No, false alarm
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
 
-          <div className="mt-6">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onClose}
-              className="w-full"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Close
-            </Button>
-            {onViewEvidence && (
-              <Button
-                size="sm"
-                variant="success"
-                onClick={() => onViewEvidence(pattern)}
-                className="mt-2 w-full"
-              >
-                <Eye className="h-4 w-4 mr-2" />
+            <div className="space-y-2 border-t border-border bg-zinc-50/60 px-5 py-4">
+              {onViewEvidence && (
+                <Button size="sm" variant="soft" onClick={() => onViewEvidence(pattern)} className="w-full">
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                  Open full evidence
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={onClose} className="w-full">
+                Close
               </Button>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
