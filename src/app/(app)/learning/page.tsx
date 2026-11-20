@@ -5,7 +5,7 @@ import { GraduationCap, RefreshCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Marker, PageHeader } from "@/components/ui/case";
+import { Marker, PageHeader, Stat } from "@/components/ui/case";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -42,20 +42,11 @@ function Score({ value, threshold, yes, no }: { value: number; threshold: number
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface px-4 py-3">
-      <p className="font-display text-[28px] font-bold leading-none text-foreground tabular-nums">{value}</p>
-      <p className="mt-1.5 text-[12px] text-zinc-500">{label}</p>
-    </div>
-  );
-}
-
 function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-[17px] font-semibold text-foreground">{title}</h2>
-      <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-zinc-500">{hint}</p>
+      <h2 className="font-display text-[16px] font-semibold text-foreground">{title}</h2>
+      <p className="mt-1 max-w-2xl text-[12px] leading-5 text-zinc-500">{hint}</p>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -63,7 +54,7 @@ function Section({ title, hint, children }: { title: string; hint: string; child
 
 function Nothing({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-center text-[13px] text-zinc-500">
+    <p className="rounded-xl border border-dashed border-border-strong bg-zinc-50/60 px-4 py-6 text-center text-[12.5px] text-zinc-500">
       {children}
     </p>
   );
@@ -123,12 +114,13 @@ export default function LearningPage() {
   return (
     <div className="max-w-5xl space-y-8">
       <PageHeader
+        eyebrow="Feedback loop"
         title="Learning"
         lede="The agent learns from rewards. Your verdict on a finding teaches it which wording is a real trick. A cancellation that is verified on the page teaches it which clicks work."
       >
         <button
           onClick={() => void load()}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           Refresh
@@ -144,9 +136,9 @@ export default function LearningPage() {
       {data === null ? (
         !error && <Skeleton className="h-[420px] w-full rounded-2xl" />
       ) : data.status !== "ok" ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-zinc-50/50 px-6 py-16 text-center">
           <GraduationCap className="h-6 w-6 text-zinc-300" aria-hidden="true" />
-          <p className="text-sm font-semibold text-zinc-700">
+          <p className="text-[13.5px] font-semibold text-zinc-700">
             {data.status === "off" ? "Learning is switched off" : "Can't reach Neo4j"}
           </p>
           <p className="max-w-md text-[12px] leading-5 text-zinc-400">
@@ -158,10 +150,10 @@ export default function LearningPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat value={waiting.length} label="Findings waiting for your verdict" />
-            <Stat value={rated.filter((f) => Math.abs(f.value ?? 0) >= t).length} label="Wordings it has learned" />
-            <Stat value={data.clicks.length} label="Clicks it has a score for" />
-            <Stat value={runCount("verified")} label="Runs verified on the page" />
+            <Stat label="Waiting for you" value={waiting.length} hint="Findings to review" tone={waiting.length > 0 ? "warning" : "ink"} />
+            <Stat label="Wordings learned" value={rated.filter((f) => Math.abs(f.value ?? 0) >= t).length} hint="Past the threshold" />
+            <Stat label="Clicks scored" value={data.clicks.length} hint="From past runs" />
+            <Stat label="Runs verified" value={runCount("verified")} hint="Proof found on the page" tone="success" />
           </div>
 
           <Section
@@ -175,7 +167,7 @@ export default function LearningPage() {
                 {waiting.map((f) => (
                   <li
                     key={keyOf(f)}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-card"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-medium text-zinc-500">
@@ -204,7 +196,7 @@ export default function LearningPage() {
                 {rated.map((f) => (
                   <li
                     key={keyOf(f)}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-card"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-medium text-zinc-500">
@@ -231,7 +223,7 @@ export default function LearningPage() {
                 {data.clicks.map((c) => (
                   <li
                     key={`${c.host}${c.path}${c.label}`}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-card"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="break-all font-mono text-[11px] text-zinc-400">

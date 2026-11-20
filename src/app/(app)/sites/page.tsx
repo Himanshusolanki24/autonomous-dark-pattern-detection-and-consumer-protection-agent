@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, Gauge, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/case";
+import { PageHeader, Stat } from "@/components/ui/case";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 
@@ -34,19 +34,23 @@ const LEVEL: Record<Level, { text: string; bar: string; chip: string }> = {
 function SiteCard({ site, rank }: { site: Site; rank: number }) {
   const lv = LEVEL[site.level];
   return (
-    <li className="rounded-2xl border border-border bg-surface p-5">
+    <li className="panel panel-hover p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[12px] font-medium text-zinc-400">#{rank}</p>
-          <h2 className="break-all text-[20px] font-bold leading-tight text-foreground">{site.host}</h2>
-          <span className={cn("mt-2 inline-block rounded-full px-2.5 py-1 text-[11px] font-medium", lv.chip)}>{lv.text}</span>
+          <p className="font-mono text-[10px] tabular-nums tracking-[0.1em] text-zinc-400">
+            #{String(rank).padStart(2, "0")}
+          </p>
+          <h2 className="font-display mt-1 break-all text-[20px] font-semibold leading-tight text-foreground">{site.host}</h2>
+          <span className={cn("mt-2 inline-block rounded-full border border-transparent px-2.5 py-1 text-[10.5px] font-semibold", lv.chip)}>
+            {lv.text}
+          </span>
         </div>
         <div className="w-full sm:w-56">
           <p className="flex items-baseline justify-between">
-            <span className="text-[12px] text-zinc-500">Trap score</span>
+            <span className="eyebrow text-[9.5px]">Trap score</span>
             <span className="font-display text-[30px] font-bold leading-none text-foreground tabular-nums">
               {site.score}
-              <span className="text-[13px] font-medium text-zinc-400"> / 100</span>
+              <span className="text-[12px] font-medium text-zinc-400"> / 100</span>
             </span>
           </p>
           <div
@@ -54,23 +58,23 @@ function SiteCard({ site, rank }: { site: Site; rank: number }) {
             role="img"
             aria-label={`Trap score ${site.score} out of 100`}
           >
-            <div className={cn("h-full rounded-full", lv.bar)} style={{ width: `${site.score}%` }} />
+            <div className={cn("h-full rounded-full transition-[width] duration-700", lv.bar)} style={{ width: `${site.score}%` }} />
           </div>
-          <p className="mt-1.5 text-[11px] leading-4 text-zinc-500">
+          <p className="mt-1.5 text-[10.5px] leading-4 text-zinc-500">
             {site.parts.patterns} from tricks · {site.parts.exit} from exit effort · {site.parts.failures} from failed tries
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
+      <div className="mt-5 grid gap-5 border-t border-border pt-4 md:grid-cols-2">
         <div>
-          <h3 className="text-[13px] font-semibold text-zinc-700">Tricks found</h3>
+          <h3 className="eyebrow text-[9.5px]">Tricks found</h3>
           {site.patterns.length === 0 ? (
-            <p className="mt-1.5 text-[13px] text-zinc-500">None found on the pages scanned.</p>
+            <p className="mt-1.5 text-[12.5px] text-zinc-500">None found on the pages scanned.</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {site.patterns.map((p) => (
-                <li key={p.type} className="text-[13px] leading-5">
+                <li key={p.type} className="text-[12.5px] leading-5">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-zinc-800">{p.label}</span>
                     <SeverityBadge severity={p.severity} />
@@ -83,10 +87,10 @@ function SiteCard({ site, rank }: { site: Site; rank: number }) {
         </div>
 
         <div>
-          <h3 className="text-[13px] font-semibold text-zinc-700">Way out</h3>
+          <h3 className="eyebrow text-[9.5px]">Way out</h3>
           {site.route ? (
             <>
-              <p className="mt-1.5 text-[13px] text-zinc-600">
+              <p className="mt-1.5 text-[12.5px] text-zinc-600">
                 <b className="font-semibold text-foreground">
                   {site.route.length} click{site.route.length === 1 ? "" : "s"}
                 </b>{" "}
@@ -96,19 +100,19 @@ function SiteCard({ site, rank }: { site: Site; rank: number }) {
                 {site.route.map((click, i) => (
                   <li key={i} className="flex items-center gap-1.5">
                     {i > 0 && <ArrowRight className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />}
-                    <span className="rounded-md border border-border bg-zinc-50 px-2 py-1 text-[12px] text-zinc-800">{click}</span>
+                    <span className="rounded-md border border-border bg-zinc-50 px-2 py-1 text-[11.5px] text-zinc-800">{click}</span>
                   </li>
                 ))}
               </ol>
             </>
           ) : (
-            <p className="mt-1.5 text-[13px] leading-5 text-zinc-500">
+            <p className="mt-1.5 text-[12.5px] leading-5 text-zinc-500">
               Not measured. The agent has not completed a cancellation on this site, so exit effort is not part of its score.
             </p>
           )}
           {site.cancelRuns > 0 && (
-            <p className="mt-3 text-[12px] text-zinc-500">
-              {site.verifiedRuns} of {site.cancelRuns} cancellation attempt{site.cancelRuns === 1 ? "" : "s"} ended verified.
+            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-400">
+              {site.verifiedRuns} of {site.cancelRuns} cancellation attempt{site.cancelRuns === 1 ? "" : "s"} ended verified
             </p>
           )}
         </div>
@@ -141,12 +145,13 @@ export default function SitesPage() {
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader
+        eyebrow="Exit difficulty"
         title="Site ranking"
         lede="Every site the agent has visited, ranked by how hard it makes leaving. The worst offenders come first."
       >
         <button
           onClick={() => void load()}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           Refresh
@@ -160,9 +165,9 @@ export default function SitesPage() {
       ) : data === null ? (
         <Skeleton className="h-[360px] w-full rounded-2xl" />
       ) : data.status !== "ok" || data.sites.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-zinc-50/50 px-6 py-16 text-center">
           <Gauge className="h-6 w-6 text-zinc-300" aria-hidden="true" />
-          <p className="text-sm font-semibold text-zinc-700">
+          <p className="text-[13.5px] font-semibold text-zinc-700">
             {data.status === "off"
               ? "The knowledge graph is switched off"
               : data.status === "down"
@@ -179,14 +184,30 @@ export default function SitesPage() {
         </div>
       ) : (
         <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stat label="Sites ranked" value={data.sites.length} hint="From the knowledge graph" />
+            <Stat
+              label="Hardest to leave"
+              value={data.sites[0] ? data.sites[0].score : "—"}
+              hint={data.sites[0]?.host ?? "No sites yet"}
+              tone="danger"
+            />
+            <Stat
+              label="Verified cancels"
+              value={data.sites.reduce((sum, s) => sum + s.verifiedRuns, 0)}
+              hint="Across every ranked site"
+              tone="success"
+            />
+          </div>
+
           <ol className="space-y-3">
             {data.sites.map((s, i) => (
               <SiteCard key={s.host} site={s} rank={i + 1} />
             ))}
           </ol>
 
-          <section className="rounded-2xl border border-border bg-zinc-50 p-5 text-[13px] leading-6 text-zinc-600">
-            <h2 className="text-[14px] font-semibold text-foreground">How the trap score is made</h2>
+          <section className="panel bg-zinc-50/60 p-5 text-[12.5px] leading-6 text-zinc-600">
+            <h2 className="font-display text-[15px] font-semibold text-foreground">How the trap score is made</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               <li>
                 <b className="font-semibold text-zinc-800">Tricks, up to 60:</b> each dark pattern found adds 5, 10, 20 or 30
