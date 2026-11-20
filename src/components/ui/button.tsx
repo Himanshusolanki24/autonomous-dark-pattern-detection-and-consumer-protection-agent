@@ -6,22 +6,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-[color,background-color,border-color,transform,box-shadow] duration-200 active:scale-[0.975] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-brand text-white hover:bg-blue-700 shadow-sm",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-        outline: "border border-border-strong bg-surface hover:bg-zinc-50 text-foreground",
-        ghost: "hover:bg-zinc-100 text-foreground",
+        default:
+          "bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-10px_rgba(79,70,229,0.7)] hover:from-blue-500 hover:to-blue-700 hover:shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_12px_26px_-10px_rgba(79,70,229,0.8)]",
+        destructive: "bg-red-600 text-white shadow-sm hover:bg-red-700",
+        outline:
+          "border border-border-strong bg-surface text-foreground shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-zinc-400 hover:bg-zinc-50",
+        ghost: "text-foreground hover:bg-zinc-100",
         secondary: "bg-zinc-100 text-foreground hover:bg-zinc-200",
-        success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+        success: "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700",
         soft: "bg-brand-soft text-blue-700 hover:bg-blue-100",
+        marker: "bg-marker text-foreground shadow-[0_1px_0_rgba(255,255,255,0.4)_inset] hover:bg-[#ffcf2e]",
       },
       size: {
         default: "h-10 px-4",
         sm: "h-8 px-3 text-xs",
-        lg: "h-12 px-6 text-base",
+        lg: "h-12 px-6 text-[15px]",
         icon: "h-10 w-10",
         iconSm: "h-8 w-8",
       },

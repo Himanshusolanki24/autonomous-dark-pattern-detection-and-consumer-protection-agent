@@ -15,7 +15,7 @@ function ConfidenceBar({ confidence, tone = "warning", className }: ConfidenceBa
   const pct = confidencePct(confidence);
   const barClass =
     tone === "danger"
-      ? "bg-red-600"
+      ? "bg-danger"
       : tone === "brand"
         ? "bg-brand"
         : tone === "success"
@@ -32,7 +32,7 @@ function ConfidenceBar({ confidence, tone = "warning", className }: ConfidenceBa
           transition={{ type: "spring", stiffness: 90, damping: 18, delay: 0.15 }}
         />
       </div>
-      <span className="w-10 text-right text-xs font-medium tabular-nums text-muted-foreground">
+      <span className="w-10 text-right font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
         {pct}%
       </span>
     </div>
