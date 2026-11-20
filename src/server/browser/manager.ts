@@ -157,22 +157,40 @@ class BrowserManager {
   }
 
   /**
-   * The browser for a target: a TinyFish cloud browser when a key is set and the
-   * cloud can reach the URL, otherwise (or if TinyFish fails) the local one.
+   * A fresh context + page for a target: in a TinyFish cloud browser when a key is set and the
+   * cloud can reach the URL, otherwise (or if TinyFish fails) in the local one.
    */
-  private async browserFor(
+  private async pageFor(
     targetUrl: string | undefined,
     log?: TinyFishCall[]
-  ): Promise<{ browser: Browser; via: "tinyfish" | "local"; cloudSessionId?: string }> {
+  ): Promise<{ context: BrowserContext; page: Page; via: "tinyfish" | "local"; cloudSessionId?: string }> {
+    const contextOptions = {
+      viewport: { width: 1280, height: 800 },
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    };
     if (this.useCloud && targetUrl && tinyfishEnabled() && reachableFromCloud(targetUrl)) {
-      try {
-        const cloud = await this.getCloudBrowser(log);
-        return { browser: cloud.browser, via: "tinyfish", cloudSessionId: cloud.sessionId };
-      } catch (err) {
-        console.warn("[browser] TinyFish cloud browser unavailable, using the local one:", (err as Error).message);
+      // TinyFish can end a cloud session once its last page closes, while it still looks
+      // connected over CDP. So a dead one is dropped and replaced once before going local.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        let cloud: CloudBrowser | undefined;
+        try {
+          cloud = await this.getCloudBrowser(log);
+          const context = await cloud.browser.newContext(contextOptions);
+          const page = await context.newPage();
+          return { context, page, via: "tinyfish", cloudSessionId: cloud.sessionId };
+        } catch (err) {
+          if (cloud && this.cloud === cloud) {
+            this.cloud = null;
+            void cloud.browser.close().catch(() => {});
+          }
+          console.warn(`[browser] TinyFish cloud browser failed (attempt ${attempt + 1}):`, (err as Error).message);
+          if (!cloud) break; // TinyFish couldn't start one at all: don't try again
+        }
       }
     }
-    return { browser: await this.getBrowser(), via: "local" };
+    const context = await (await this.getBrowser()).newContext(contextOptions);
+    return { context, page: await context.newPage(), via: "local" };
   }
 
   /** Create an isolated context for a session (no shared cookies/auth). */
@@ -180,13 +198,7 @@ class BrowserManager {
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
 
-    const { browser, via, cloudSessionId } = await this.browserFor(targetUrl, log);
-    const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 },
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-    });
-    const page = await context.newPage();
+    const { context, page, via, cloudSessionId } = await this.pageFor(targetUrl, log);
     page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
     page.setDefaultTimeout(this.opts.actionTimeoutMs);
 
@@ -255,14 +267,11 @@ class BrowserManager {
   }
 
   private async renderShot(url: string): Promise<Buffer> {
-    const { browser } = await this.browserFor(url);
-    const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 },
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-    });
+    // Always local: closing a page in the shared TinyFish browser can end it under a running scan,
+    // and a scan already files its own cloud screenshot via captureShot.
+    // ponytail: one shared cloud browser; give each session its own TinyFish session if scans run in parallel.
+    const { context, page } = await this.pageFor(undefined);
     try {
-      const page = await context.newPage();
       page.setDefaultNavigationTimeout(this.opts.navigationTimeoutMs);
       // Video and audio are never visible in a still image; skip downloading them.
       await page.route("**/*", (route) =>

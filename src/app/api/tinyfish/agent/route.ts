@@ -13,7 +13,9 @@ import { checkRateLimit } from "@/server/security/rate-limit";
 import { parseOrThrow } from "@/server/security/validation";
 import { validateTargetUrl } from "@/server/security/ssrf";
 import { AppError, ValidationError } from "@/server/security/errors";
+import { classifyPage } from "@/server/detection/classifier";
 import {
+  agentResultText,
   CANCEL_GOALS,
   readAgentEvents,
   reachableFromCloud,
@@ -58,6 +60,18 @@ export const POST = api(async (req: Request) => {
       try {
         for await (const ev of readAgentEvents(source)) {
           controller.enqueue(encoder.encode(JSON.stringify({ ...ev, ms: Date.now() - t0 }) + "\n"));
+          if (ev.type === "COMPLETE" && ev.result) {
+            // The agent's report goes through the detector, which saves its findings to the
+            // knowledge graph like a scan does. Clicks aren't recorded: TinyFish doesn't report them.
+            // ponytail: fire-and-forget; on serverless the write can be cut off once the stream closes.
+            classifyPage({
+              url: url.toString(),
+              title: "TinyFish agent report",
+              visibleText: agentResultText(ev.result).replace(/[*#`>]/g, ""),
+              elements: [],
+              pageState: "unknown",
+            }).catch((err) => console.warn("[tinyfish] couldn't classify the agent report:", (err as Error).message));
+          }
         }
       } catch (err) {
         controller.enqueue(encoder.encode(JSON.stringify({ type: "ERROR", error: (err as Error).message }) + "\n"));

@@ -75,13 +75,18 @@ export function TinyFishAgentPanel() {
         abort.current.signal
       );
       const ok = status === "COMPLETED";
-      setCalls((c) => [...c, { api: "agent", label, ok, ms: Date.now() - t0, id: runId, error: ok ? undefined : `Run ended: ${status ?? "no result"}` }]);
+      setCalls((c) => [
+        ...c,
+        { api: "agent", label, ok, ms: Date.now() - t0, id: runId, error: ok ? undefined : `Run ended: ${status ?? "no result"}` },
+      ]);
       if (!ok) throw new Error(`The TinyFish run ended without finishing (${status ?? "no result"}).`);
       setPhase(mode === "explore" ? "awaiting" : "done");
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setCalls((c) =>
-        c.some((x) => x.id === runId && runId) ? c : [...c, { api: "agent", label, ok: false, ms: Date.now() - t0, id: runId, error: (err as Error).message }]
+        c.some((x) => x.id === runId && runId)
+          ? c
+          : [...c, { api: "agent", label, ok: false, ms: Date.now() - t0, id: runId, error: (err as Error).message }]
       );
       setError((err as Error).message);
       setPhase("error");
@@ -92,77 +97,94 @@ export function TinyFishAgentPanel() {
   const busy = phase === "exploring" || phase === "confirming";
 
   return (
-    <section className="max-w-5xl rounded-2xl border border-border bg-surface p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[16px] font-semibold">Run with the TinyFish agent</h2>
-        <span className="text-[12px] text-zinc-500">TinyFish Web Agent · cloud browser · live view</span>
+    <section className="panel relative max-w-5xl overflow-hidden p-6">
+      <span aria-hidden="true" className="absolute -right-20 -top-24 h-52 w-52 rounded-full bg-brand/10 blur-3xl" />
+      <div className="relative flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-[17px] font-semibold">Run with the TinyFish agent</h2>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-zinc-400">
+          Web Agent · cloud browser · live view
+        </span>
       </div>
-      <p className="mt-1 text-[13.5px] text-zinc-500">
-        Give TinyFish a plain-English goal. It walks the cancel flow on a cloud browser, declines retention offers, and stops before
-        the final confirm until you approve.
+      <p className="relative mt-1 max-w-2xl text-[13px] leading-6 text-zinc-500">
+        Give TinyFish a plain-English goal. It walks the cancel flow on a cloud browser, declines retention offers, and stops
+        before the final confirm until you approve.
       </p>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="relative mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           aria-label="Public page address for the TinyFish agent"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           disabled={busy}
-          className="h-11 flex-1 rounded-xl border border-border-strong bg-background px-4 font-mono text-[13px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:opacity-60"
+          className="h-11 flex-1 rounded-xl border border-border-strong bg-surface px-4 font-mono text-[12.5px] shadow-card focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:opacity-60"
         />
-        <Button onClick={() => void start("explore")} disabled={busy || !url.trim() || enabled === null} className="h-11 rounded-xl px-5">
+        <Button onClick={() => void start("explore")} disabled={busy || !url.trim() || enabled === null} className="h-11 px-5">
           {phase === "exploring" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
           {phase === "exploring" ? "TinyFish is working…" : "Run with TinyFish"}
         </Button>
       </div>
 
       {phase !== "idle" && (
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="relative mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-3">
-            <div className="aspect-video overflow-hidden rounded-xl border border-border bg-zinc-950">
+            <div className="aspect-video overflow-hidden rounded-xl border border-border bg-foreground">
               {run.streamUrl && busy ? (
                 <iframe src={run.streamUrl} title="TinyFish live browser view" className="h-full w-full" allow="clipboard-read" />
               ) : (
-                <div className="flex h-full items-center justify-center px-6 text-center text-[13px] text-zinc-400">
-                  {busy ? "Starting the TinyFish cloud browser…" : "The live view closes when the run ends."}
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                  <span className={cn("h-2 w-2 rounded-full", busy ? "bg-marker animate-dot-pulse" : "bg-white/30")} />
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-white/50">
+                    {busy ? "Starting the TinyFish cloud browser…" : "The live view closes when the run ends."}
+                  </p>
                 </div>
               )}
             </div>
             {run.streamUrl && busy && (
-              <a href={run.streamUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] text-brand">
+              <a
+                href={run.streamUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[12px] font-medium text-brand hover:underline"
+              >
                 Open the live view in a new tab <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             )}
 
             {phase === "awaiting" && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <p className="font-semibold text-amber-900">Stopped before the final confirm</p>
-                <p className="mt-1 text-[13.5px] text-amber-900/80">Nothing irreversible has happened. Approve to let TinyFish finish the cancellation.</p>
+              <div className="rounded-xl border border-amber-200/80 bg-warning-soft p-4">
+                <p className="font-display text-[14px] font-semibold text-amber-900">Stopped before the final confirm</p>
+                <p className="mt-1 text-[12.5px] leading-5 text-amber-900/80">
+                  Nothing irreversible has happened. Approve to let TinyFish finish the cancellation.
+                </p>
                 <div className="mt-3 flex gap-2">
-                  <Button onClick={() => void start("confirm")}>
-                    <Check className="h-4 w-4" aria-hidden="true" /> Approve
+                  <Button size="sm" onClick={() => void start("confirm")}>
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> Approve
                   </Button>
-                  <Button variant="outline" onClick={() => setPhase("rejected")}>
-                    <X className="h-4 w-4" aria-hidden="true" /> Reject
+                  <Button variant="outline" size="sm" onClick={() => setPhase("rejected")}>
+                    <X className="h-3.5 w-3.5" aria-hidden="true" /> Reject
                   </Button>
                 </div>
               </div>
             )}
-            {phase === "rejected" && <p className="text-[14px] text-zinc-600">Rejected. TinyFish was not asked to confirm; the subscription is untouched.</p>}
+            {phase === "rejected" && (
+              <p className="text-[13px] leading-5 text-zinc-600">
+                Rejected. TinyFish was not asked to confirm; the subscription is untouched.
+              </p>
+            )}
             {phase === "done" && (
-              <p className="flex items-center gap-2 font-semibold text-emerald-700">
-                <ShieldCheck className="h-5 w-5" aria-hidden="true" /> Cancellation finished by TinyFish. Run id saved below as proof.
+              <p className="flex items-center gap-2 text-[13.5px] font-semibold text-emerald-700">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" /> Cancellation finished by TinyFish. Run ID saved below as proof.
               </p>
             )}
             {error && (
-              <p role="alert" className="text-[13.5px] text-red-600">
+              <p role="alert" className="rounded-lg border border-red-200 bg-danger-soft px-3 py-2 text-[12.5px] leading-5 text-red-700">
                 {error}
               </p>
             )}
             {run.result && (
               <div>
-                <h3 className="text-[13px] font-semibold">What TinyFish reported</h3>
-                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl bg-zinc-50 p-3 text-[12.5px] leading-relaxed text-zinc-700">
+                <h3 className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-zinc-500">What TinyFish reported</h3>
+                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-zinc-50/70 p-3 font-mono text-[11.5px] leading-relaxed text-zinc-700">
                   {run.result}
                 </pre>
               </div>
@@ -171,15 +193,25 @@ export function TinyFishAgentPanel() {
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-[13px] font-semibold">Steps</h3>
+              <h3 className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-zinc-500">Steps</h3>
               <ol className="mt-2 space-y-2">
                 {run.steps.map((s, i) => (
-                  <li key={i} className={cn("flex gap-2 text-[13px]", i === run.steps.length - 1 && busy ? "text-foreground" : "text-zinc-600")}>
-                    <span className="font-mono text-zinc-400">{i + 1}</span>
+                  <li
+                    key={i}
+                    className={cn(
+                      "flex gap-2 text-[12.5px] leading-5",
+                      i === run.steps.length - 1 && busy ? "text-foreground" : "text-zinc-600"
+                    )}
+                  >
+                    <span className="font-mono text-[10.5px] tabular-nums text-zinc-400">{String(i + 1).padStart(2, "0")}</span>
                     {s}
                   </li>
                 ))}
-                {busy && <li className="flex items-center gap-2 text-[13px] text-zinc-400"><Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> working</li>}
+                {busy && (
+                  <li className="flex items-center gap-2 text-[12.5px] text-zinc-400">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> working
+                  </li>
+                )}
               </ol>
             </div>
             <TinyFishActivity calls={calls} />
