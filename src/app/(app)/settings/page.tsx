@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Settings,
   User,
   Bot,
   ShieldCheck,
@@ -19,6 +18,7 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/components/ui/case";
 import { cn } from "@/lib/utils";
 
 // ── Section card ──────────────────────────────────────────────────────────────
@@ -29,38 +29,46 @@ function SettingsCard({
   icon: Icon,
   children,
   index = 0,
+  tone = "default",
 }: {
   title: string;
   description?: string;
   icon?: React.ElementType;
   children: React.ReactNode;
   index?: number;
+  tone?: "default" | "danger";
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.06 }}
-      className="rounded-xl border border-zinc-200 bg-white shadow-sm"
+      transition={{ duration: 0.28, delay: index * 0.05 }}
+      className={cn("panel overflow-hidden", tone === "danger" && "border-red-200/80")}
     >
-      <div className="flex items-start gap-3 border-b border-zinc-100 px-5 py-4">
+      <div
+        className={cn(
+          "flex items-start gap-3 border-b border-border px-5 py-4",
+          tone === "danger" && "border-red-200/70 bg-danger-soft/50"
+        )}
+      >
         {Icon && (
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500"
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+              tone === "danger" ? "bg-red-100 text-red-600" : "bg-zinc-100 text-zinc-500"
+            )}
             aria-hidden="true"
           >
             <Icon className="h-4 w-4" />
           </span>
         )}
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
-          {description && (
-            <p className="mt-0.5 text-[12px] text-zinc-500">{description}</p>
-          )}
+          <h2 className="font-display text-[14.5px] font-semibold text-foreground">{title}</h2>
+          {description && <p className="mt-0.5 text-[12px] leading-5 text-zinc-500">{description}</p>}
         </div>
       </div>
       <div className="px-5 py-4">{children}</div>
-    </motion.div>
+    </motion.section>
   );
 }
 
@@ -84,20 +92,16 @@ function ToggleRow({
   return (
     <div className="flex items-start justify-between gap-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className={cn("text-[13px] font-medium", disabled ? "text-zinc-400" : "text-zinc-800")}>
-          {title}
-        </p>
+        <p className={cn("text-[13px] font-medium", disabled ? "text-zinc-400" : "text-foreground")}>{title}</p>
         <p className="mt-0.5 text-[12px] leading-5 text-zinc-500">{description}</p>
         {disabled && disabledReason && (
-          <p className="mt-0.5 text-[11px] text-zinc-400 italic">{disabledReason}</p>
+          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-zinc-500">
+            <ShieldCheck className="h-2.5 w-2.5" aria-hidden="true" />
+            {disabledReason}
+          </p>
         )}
       </div>
-      <Switch
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-        aria-label={title}
-      />
+      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} aria-label={title} />
     </div>
   );
 }
@@ -126,10 +130,7 @@ function SaveButton({ state, onSave }: { state: SaveState; onSave: () => void })
       onClick={onSave}
       disabled={state === "saving"}
       size="sm"
-      className={cn(
-        "transition-all",
-        state === "saved" && "bg-emerald-600 hover:bg-emerald-700"
-      )}
+      className={cn("min-w-[118px] transition-all", state === "saved" && "bg-emerald-600 hover:bg-emerald-600")}
     >
       {state === "saving" ? (
         <>
@@ -138,13 +139,13 @@ function SaveButton({ state, onSave }: { state: SaveState; onSave: () => void })
         </>
       ) : state === "saved" ? (
         <>
-          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+          <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
           Saved
         </>
       ) : state === "error" ? (
         <>
           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-          Error — Retry
+          Error — retry
         </>
       ) : (
         "Save changes"
@@ -154,6 +155,12 @@ function SaveButton({ state, onSave }: { state: SaveState; onSave: () => void })
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+const SENSITIVITY = [
+  { key: "low", label: "Low", hint: "Only flag clear, structurally obvious dark patterns." },
+  { key: "medium", label: "Medium", hint: "Flag patterns above 75% confidence. Balance sensitivity and noise." },
+  { key: "high", label: "High", hint: "Flag all patterns above 60% confidence, including subtle wording tactics." },
+] as const;
 
 export default function SettingsPage() {
   // Profile
@@ -176,36 +183,27 @@ export default function SettingsPage() {
   // Danger zone
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
 
+  const activeSensitivity = SENSITIVITY.find((s) => s.key === sensitivity) ?? SENSITIVITY[2];
+
   return (
     <div className="max-w-3xl space-y-5">
-
-      {/* ── Header ───────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Settings className="h-5 w-5 text-zinc-500" aria-hidden="true" />
-          <h2 className="text-[28px] font-bold leading-tight text-zinc-900">Settings</h2>
-        </div>
-        <p className="mt-0.5 text-[12px] text-zinc-400">
-          Configure how the agent behaves on your behalf.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Settings"
+        lede="Configure how the agent behaves on your behalf. In dev mode these preferences stay in this browser session."
+      />
 
       {/* ── Profile ──────────────────────────────── */}
-      <SettingsCard
-        title="Profile"
-        description="Your display name and account information."
-        icon={User}
-        index={0}
-      >
+      <SettingsCard title="Profile" description="Your display name and account information." icon={User} index={0}>
         <div className="flex items-center gap-4">
           <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-lg font-bold text-zinc-500"
+            className="font-display flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-gradient-to-br from-brand-soft to-surface text-[20px] font-bold text-blue-700 shadow-card"
             aria-label="Avatar initials"
           >
-            {displayName.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="min-w-0 flex-1">
-            <label htmlFor="display-name" className="mb-1 block text-[11px] font-medium text-zinc-500">
+            <label htmlFor="display-name" className="eyebrow mb-1.5 block text-[9.5px]">
               Display name
             </label>
             <input
@@ -213,64 +211,57 @@ export default function SettingsPage() {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="h-10 w-full rounded-xl border border-border-strong bg-surface px-3 text-[14px] text-foreground shadow-card placeholder:text-zinc-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15"
               placeholder="Your name"
             />
           </div>
         </div>
-        <div className="mt-3">
-          <label className="mb-1 block text-[11px] font-medium text-zinc-500">
-            Email
-          </label>
-          <div className="flex h-9 items-center rounded-lg border border-zinc-100 bg-zinc-50 px-3 text-sm text-zinc-400">
+        <div className="mt-3.5">
+          <p className="eyebrow mb-1.5 text-[9.5px]">Email</p>
+          <div className="flex h-10 items-center rounded-xl border border-border bg-zinc-50/70 px-3 font-mono text-[12.5px] text-zinc-500">
             demo@trapkiller.dev
-            <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+            <span className="ml-2 rounded-md bg-zinc-200/70 px-1.5 py-0.5 font-sans text-[9.5px] font-semibold uppercase tracking-wide text-zinc-500">
               dev mode
             </span>
           </div>
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-border pt-4">
           <SaveButton state={profileSave.state} onSave={() => void profileSave.save()} />
         </div>
       </SettingsCard>
 
       {/* ── Agent Preferences ────────────────────── */}
       <SettingsCard
-        title="Agent Preferences"
+        title="Agent preferences"
         description="How aggressively the agent detects and acts on dark patterns."
         icon={Bot}
         index={1}
       >
-        {/* Sensitivity */}
         <div className="mb-4">
-          <p className="mb-2 text-[12px] font-medium text-zinc-600">
-            Detection sensitivity
-          </p>
-          <div className="flex gap-2" role="group" aria-label="Detection sensitivity">
-            {(["low", "medium", "high"] as const).map((level) => (
+          <p className="eyebrow mb-2 text-[9.5px]">Detection sensitivity</p>
+          <div className="flex gap-1.5 rounded-xl border border-border bg-zinc-50 p-1" role="group" aria-label="Detection sensitivity">
+            {SENSITIVITY.map(({ key, label }) => (
               <button
-                key={level}
-                onClick={() => setSensitivity(level)}
+                key={key}
+                onClick={() => setSensitivity(key)}
                 className={cn(
-                  "flex-1 rounded-lg border px-3 py-2 text-[12px] font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                  sensitivity === level
-                    ? "border-brand bg-brand-soft text-brand"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                  "relative flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline-none",
+                  sensitivity === key ? "text-blue-700" : "text-zinc-500 hover:text-foreground"
                 )}
-                aria-pressed={sensitivity === level}
+                aria-pressed={sensitivity === key}
               >
-                {level}
+                {sensitivity === key && (
+                  <motion.span
+                    layoutId="sensitivity-pill"
+                    className="absolute inset-0 rounded-lg border border-border bg-surface shadow-card"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="relative">{label}</span>
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-zinc-400">
-            {sensitivity === "high" &&
-              "Flag all patterns above 60% confidence, including subtle wording tactics."}
-            {sensitivity === "medium" &&
-              "Flag patterns above 75% confidence. Balance sensitivity and noise."}
-            {sensitivity === "low" &&
-              "Only flag clear, structurally obvious dark patterns."}
-          </p>
+          <p className="mt-2 text-[11.5px] leading-5 text-zinc-500">{activeSensitivity.hint}</p>
         </div>
 
         <Separator />
@@ -282,14 +273,14 @@ export default function SettingsPage() {
           onChange={setPauseOnDetection}
         />
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-border pt-4">
           <SaveButton state={agentSave.state} onSave={() => void agentSave.save()} />
         </div>
       </SettingsCard>
 
       {/* ── Safety Controls ──────────────────────── */}
       <SettingsCard
-        title="Safety Controls"
+        title="Safety controls"
         description="Controls that protect against unintended actions."
         icon={ShieldCheck}
         index={2}
@@ -300,7 +291,7 @@ export default function SettingsPage() {
           checked
           onChange={() => undefined}
           disabled
-          disabledReason="This control is always on for your safety."
+          disabledReason="Always on for your safety"
         />
 
         <Separator />
@@ -312,14 +303,14 @@ export default function SettingsPage() {
           onChange={setAutoStopOnError}
         />
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-border pt-4">
           <SaveButton state={safetySave.state} onSave={() => void safetySave.save()} />
         </div>
       </SettingsCard>
 
       {/* ── Evidence ─────────────────────────────── */}
       <SettingsCard
-        title="Evidence &amp; Proof"
+        title="Evidence & proof"
         description="How proof screenshots are stored and retained."
         icon={Camera}
         index={3}
@@ -331,38 +322,37 @@ export default function SettingsPage() {
           onChange={setProofRetention}
         />
 
-        <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
-          <p className="text-[11px] leading-5 text-zinc-500">
+        <div className="mt-3 rounded-xl border border-border bg-zinc-50/70 p-3">
+          <p className="text-[11.5px] leading-5 text-zinc-500">
             Proof files are written to{" "}
-            <code className="rounded bg-zinc-200 px-1 font-mono text-[10px]">
+            <code className="rounded bg-zinc-200/70 px-1 py-0.5 font-mono text-[10.5px] text-zinc-700">
               backend/.proofs/
             </code>{" "}
             and are only accessible server-side. They are never exposed publicly.
           </p>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-border pt-4">
           <SaveButton state={evidenceSave.state} onSave={() => void evidenceSave.save()} />
         </div>
       </SettingsCard>
 
       {/* ── Demo Mode ────────────────────────────── */}
       <SettingsCard
-        title="Demo Mode"
+        title="Demo mode"
         description="Simulate the full cancellation journey for demonstrations."
         icon={Play}
         index={4}
       >
-        <p className="text-[12px] leading-5 text-zinc-500">
-          Demo mode runs a deterministic simulation of the agent pipeline using
-          a fictional service (StreamFlow). It does not make any real requests
-          to external websites.
-        </p>
-        <div className="mt-3">
-          <Button asChild variant="outline" size="sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-md text-[12px] leading-5 text-zinc-500">
+            Demo mode runs a deterministic simulation of the agent pipeline using a fictional service
+            (StreamFlow). It does not make any real requests to external websites.
+          </p>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
             <Link href="/demo">
-              Open Live Demo
-              <ChevronRight className="ml-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Open live demo
+              <ChevronRight className="ml-0.5 h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </Button>
         </div>
@@ -370,27 +360,26 @@ export default function SettingsPage() {
 
       {/* ── Danger Zone ──────────────────────────── */}
       <SettingsCard
-        title="Danger Zone"
+        title="Danger zone"
         description="Destructive actions that cannot be undone."
         icon={Trash2}
         index={5}
+        tone="danger"
       >
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[13px] font-semibold text-red-800">
-                Reset all sessions
-              </p>
-              <p className="mt-0.5 text-[12px] text-red-700">
-                Clears all active sessions, event history, and detected
-                patterns from the in-memory store. This is permanent.
+        <div className="rounded-xl border border-red-200 bg-danger-soft/60 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-red-800">Reset all sessions</p>
+              <p className="mt-0.5 text-[12px] leading-5 text-red-700">
+                Clears all active sessions, event history, and detected patterns from the in-memory store.
+                This is permanent.
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowDangerConfirm((v) => !v)}
-              className="shrink-0 border-red-300 text-red-700 hover:bg-red-100"
+              className="shrink-0 border-red-300 bg-surface text-red-700 hover:bg-red-100"
             >
               Reset
             </Button>
@@ -406,9 +395,7 @@ export default function SettingsPage() {
                 className="overflow-hidden"
               >
                 <div className="mt-3 border-t border-red-200 pt-3">
-                  <p className="text-[12px] font-medium text-red-800">
-                    Are you sure? This cannot be undone.
-                  </p>
+                  <p className="text-[12px] font-medium text-red-800">Are you sure? This cannot be undone.</p>
                   <div className="mt-2 flex gap-2">
                     <Button
                       size="sm"
@@ -420,11 +407,7 @@ export default function SettingsPage() {
                     >
                       Yes, reset
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDangerConfirm(false)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setShowDangerConfirm(false)}>
                       Cancel
                     </Button>
                   </div>
