@@ -76,7 +76,7 @@ export function PricingSection() {
             </div>
 
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="font-display text-[30px] font-bold text-foreground">₹49</span>
+              <span className="font-display text-[30px] font-bold text-foreground">₹149</span>
               <span className="text-[12px] text-zinc-500">/ 24 hours</span>
             </div>
             <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-700 font-medium">
@@ -110,7 +110,7 @@ export function PricingSection() {
               href="/dashboard"
               className="mt-5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500 text-[12.5px] font-semibold text-white shadow-xs transition-colors hover:bg-amber-600 active:scale-[0.98]"
             >
-              Get 24h Pass (₹49)
+              Get 24h Pass (₹149)
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
