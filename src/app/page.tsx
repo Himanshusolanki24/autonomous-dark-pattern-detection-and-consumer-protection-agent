@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { HeroCase } from "@/components/landing/HeroCase";
 import { SystemMap } from "@/components/landing/SystemMap";
+import { PricingSection } from "@/components/landing/PricingSection";
 import { Marker } from "@/components/ui/case";
 import { DrawLine, Marquee, Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
 
@@ -167,6 +168,7 @@ export default function LandingPage() {
             <a href="#catches" className="transition-colors hover:text-foreground">What it catches</a>
             <a href="#compare" className="transition-colors hover:text-foreground">Why TrapKiller</a>
             <a href="#safety" className="transition-colors hover:text-foreground">Safety</a>
+            <a href="#pricing" className="transition-colors hover:text-foreground">Pricing</a>
           </nav>
 
           <Link
@@ -507,6 +509,9 @@ export default function LandingPage() {
             </Stagger>
           </div>
         </section>
+
+        {/* Pricing */}
+        <PricingSection />
 
         {/* Call to action */}
         <section className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8">

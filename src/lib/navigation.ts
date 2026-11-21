@@ -10,6 +10,7 @@ import {
   Network,
   GraduationCap,
   Gauge,
+  CreditCard,
 } from "lucide-react";
 
 export interface NavItem {
@@ -36,6 +37,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "System",
     items: [
+      { href: "/pricing", label: "Plans & 24h Pass", icon: CreditCard, description: "Pricing in INR" },
       { href: "/security", label: "Privacy & safety", icon: ShieldCheck, description: "Privacy by design" },
       { href: "/settings", label: "Settings", icon: Settings, description: "Preferences" },
     ],
