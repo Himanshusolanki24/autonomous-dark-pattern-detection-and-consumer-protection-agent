@@ -31,3 +31,4 @@ npm-debug.log*
 # pitch decks stay local
 /*.pptx
 /*.pdf
+.vercel

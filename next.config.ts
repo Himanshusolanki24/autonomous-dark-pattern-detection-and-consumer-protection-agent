@@ -18,7 +18,6 @@ const nextConfig: NextConfig = {
     "@sparticuz/chromium",
     "neo4j-driver",
     "@huggingface/transformers",
-    "onnxruntime-node",
   ],
   // Pin the app root so Next does not walk up to the parent folder.
   turbopack: {
